@@ -1,7 +1,11 @@
 extern crate arena;
+extern crate debug;
 
 use std::hash::Hash;
 use std::num::Zero;
+
+#[cfg(test)]
+mod test;
 
 mod node {
     use std::cell::RefCell;
@@ -73,18 +77,20 @@ mod wrap {
     impl <'a, N, C> PartialOrd for WrappedNode<'a, N, C>
     where C: PartialOrd {
         fn partial_cmp(&self, other: &WrappedNode<'a, N, C>) -> Option<Ordering> {
-            let this_cost = self.node.cost.borrow();
-            let that_cost = other.node.cost.borrow();
-            (*this_cost).partial_cmp(&*that_cost)
+            let this_cost = self.node.cost_with_heuristic.borrow();
+            let that_cost = other.node.cost_with_heuristic.borrow();
+            // Match backwards for the priority queue.
+            (*that_cost).partial_cmp(&*this_cost)
         }
     }
 
     impl <'a, N, C> Ord for WrappedNode<'a, N, C>
     where C: PartialOrd {
         fn cmp(&self, other: &WrappedNode<'a, N, C>) -> Ordering {
-            let this_cost = self.node.cost.borrow();
-            let that_cost = other.node.cost.borrow();
-            match (*this_cost).partial_cmp(&*that_cost) {
+            let this_cost = self.node.cost_with_heuristic.borrow();
+            let that_cost = other.node.cost_with_heuristic.borrow();
+            // Match backwards for the priority queue.
+            match (*that_cost).partial_cmp(&*this_cost) {
                 None => Equal,
                 Some(x) => x
             }
@@ -187,6 +193,8 @@ where N: Hash + PartialEq + Clone, C: PartialOrd + Zero + Clone {
             if state.is_closed(&neighbor_state) {
                 continue;
             }
+
+            //println!("{:?} at {:?}", neighbor_state, cost);
 
             let tentative_g_score = *current.cost.borrow() + cost;
 
