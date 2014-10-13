@@ -1,0 +1,225 @@
+extern crate arena;
+
+use std::hash::Hash;
+use std::num::Zero;
+
+mod node {
+    use std::cell::RefCell;
+    use std::hash::Hash;
+    use std::hash::sip::SipState;
+    use std::cmp::Equiv;
+
+    #[deriving(Hash)]
+    pub struct DumbNode<'b, N: 'b>(pub &'b N);
+
+    impl <'a, 'b, N: PartialEq, C> Equiv<&'a Node<'a, N, C>> for DumbNode<'b, N> {
+        fn equiv(&self, other: &&Node<'a, N, C>) -> bool {
+            let DumbNode(x) = *self;
+            x.eq(&other.state)
+        }
+    }
+
+    pub struct Node<'a, N: 'a, C: 'a> {
+        pub state: N,
+        pub parent: RefCell<Option<&'a Node<'a, N, C>>>,
+        pub cost: RefCell<C>,
+        pub cost_with_heuristic: RefCell<C>
+    }
+
+    impl <'a, N, C> Hash for Node<'a, N, C>
+    where N: Hash {
+        fn hash(&self, hash_state: &mut SipState) {
+            self.state.hash(hash_state);
+        }
+    }
+
+    impl <'a, N, C> PartialEq for Node<'a, N, C>
+    where N: PartialEq {
+        fn eq(&self, other: &Node<'a, N, C>) -> bool {
+            self.state.eq(&other.state)
+        }
+    }
+
+    impl <'a, N, C> Eq for Node<'a, N, C> where N: PartialEq { }
+}
+
+mod wrap {
+    use std::cmp::{Ordering, Equal};
+    use super::node::Node;
+
+    pub struct WrappedNode<'a, N: 'a, C:'a> {
+        pub node: &'a Node<'a, N, C>
+    }
+
+    impl <'a, N, C> WrappedNode<'a, N, C> {
+        pub fn new(node: &'a Node<'a, N, C>) -> WrappedNode<'a, N, C> {
+            WrappedNode {
+                node: node
+            }
+        }
+    }
+
+    impl <'a, N, C> PartialEq for WrappedNode<'a, N, C>
+    where C: PartialEq {
+        fn eq(&self, other: &WrappedNode<'a, N, C>) -> bool {
+            let this_cost = self.node.cost.borrow();
+            let that_cost = other.node.cost.borrow();
+            *this_cost == *that_cost
+        }
+    }
+
+    impl <'a, N, C> Eq for WrappedNode<'a, N, C> where C: PartialEq { }
+
+    impl <'a, N, C> PartialOrd for WrappedNode<'a, N, C>
+    where C: PartialOrd {
+        fn partial_cmp(&self, other: &WrappedNode<'a, N, C>) -> Option<Ordering> {
+            let this_cost = self.node.cost.borrow();
+            let that_cost = other.node.cost.borrow();
+            (*this_cost).partial_cmp(&*that_cost)
+        }
+    }
+
+    impl <'a, N, C> Ord for WrappedNode<'a, N, C>
+    where C: PartialOrd {
+        fn cmp(&self, other: &WrappedNode<'a, N, C>) -> Ordering {
+            let this_cost = self.node.cost.borrow();
+            let that_cost = other.node.cost.borrow();
+            match (*this_cost).partial_cmp(&*that_cost) {
+                None => Equal,
+                Some(x) => x
+            }
+        }
+    }
+}
+
+mod state {
+    use arena::TypedArena;
+    use super::node::Node;
+    use super::node::DumbNode;
+    use super::wrap::WrappedNode as Wnode;
+    use std::collections::PriorityQueue;
+    use std::cell::RefCell;
+    use std::hash::Hash;
+    use std::collections::{HashSet, HashMap};
+
+    pub struct AstarState<'a, N: 'a, C: 'a> {
+        pub arena: TypedArena<Node<'a, N, C>>,
+        pub queue: RefCell<PriorityQueue<Wnode<'a, N, C>>>,
+        pub open: RefCell<HashMap<&'a Node<'a, N, C>, &'a Node<'a, N, C>>>,
+        pub closed: RefCell<HashSet<&'a Node<'a, N, C>>>
+    }
+
+    impl <'a, N, C> AstarState<'a, N, C>
+    where N: Hash + PartialEq, C: PartialOrd {
+        pub fn new() -> AstarState<'a, N, C> {
+            AstarState {
+                arena: TypedArena::new(),
+                queue: RefCell::new(PriorityQueue::new()),
+                open: RefCell::new(HashMap::new()),
+                closed: RefCell::new(HashSet::new())
+            }
+        }
+
+        pub fn add(&'a self, n: N, cost: C, heur_cost: C) -> &'a Node<'a, N, C> {
+            let node = Node {
+                state: n,
+                parent: RefCell::new(None),
+                cost: RefCell::new(cost),
+                cost_with_heuristic: RefCell::new(heur_cost)
+            };
+
+            let node_ref = self.arena.alloc(node);
+            let wrapped = Wnode::new(node_ref);
+            self.queue.borrow_mut().push(wrapped);
+            self.open.borrow_mut().insert(node_ref, node_ref);
+
+            node_ref
+        }
+
+        pub fn pop(&'a self) -> Option<&'a Node<'a, N, C>> {
+            let node = self.queue.borrow_mut().pop().map(|w| w.node);
+            match node {
+                Some(node) => {
+                    self.open.borrow_mut().remove(&node);
+                    self.closed.borrow_mut().insert(node);
+                }
+                None => {}
+            }
+            node
+        }
+
+        pub fn is_closed(&self, state: &N) -> bool {
+            self.closed.borrow().contains_equiv(&DumbNode(state))
+        }
+
+        pub fn find_open(&self, state: &N) -> Option<&'a Node<'a, N, C>> {
+            self.open.borrow().find_equiv(&DumbNode(state)).map(|a| *a)
+        }
+    }
+}
+
+pub trait SearchState<N, C> {
+    fn start(&self) -> N;
+    fn is_end(&self, &N) -> bool;
+    fn heuristic(&self, &N) -> C;
+    fn neighbors(&self, at: &N) -> Vec<(N, C)>;
+}
+
+pub fn astar<N, C, S: SearchState<N, C>>(s: S) -> Option<Vec<N>>
+where N: Hash + PartialEq + Clone, C: PartialOrd + Zero + Clone {
+    let state: state::AstarState<N, C> = state::AstarState::new();
+    let mut end;
+    state.add(s.start(), Zero::zero(), Zero::zero());
+
+    loop {
+        let current = match state.pop() {
+            Some(ref node) if s.is_end(&node.state) => {
+                end = Some(*node);
+                break;
+            }
+            Some(node) => node,
+            None => {
+                return None;
+            }
+        };
+
+        for (neighbor_state, cost) in s.neighbors(&current.state).into_iter() {
+            if state.is_closed(&neighbor_state) {
+                continue;
+            }
+
+            let tentative_g_score = *current.cost.borrow() + cost;
+
+            match state.find_open(&neighbor_state) {
+                Some(n) if *n.cost.borrow() < tentative_g_score.clone() => {
+                    *n.cost.borrow_mut() = tentative_g_score.clone();
+                    let heur = s.heuristic(&neighbor_state);
+                    *n.cost_with_heuristic.borrow_mut() = tentative_g_score + heur;
+                    *n.parent.borrow_mut() = Some(current)
+                }
+                Some(_) => {}
+                None => {
+                    let heur = s.heuristic(&neighbor_state);
+                    let n = state.add(neighbor_state,
+                                  tentative_g_score.clone(),
+                                  tentative_g_score + heur);
+                    *n.parent.borrow_mut() = Some(current)
+                }
+            };
+        }
+    }
+
+    let mut cur = end;
+    let mut path = vec![];
+    loop {
+        match cur {
+            Some(n) => {
+                path.push(n.state.clone());
+                cur = *n.parent.borrow();
+            }
+            None => {
+                return Some(path);
+            }
+        }
+    }
+}
