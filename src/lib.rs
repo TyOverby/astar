@@ -19,12 +19,12 @@ mod node {
     impl <'a, 'b, N: PartialEq, C> Equiv<&'a Node<'a, N, C>> for DumbNode<'b, N> {
         fn equiv(&self, other: &&Node<'a, N, C>) -> bool {
             let DumbNode(x) = *self;
-            x.eq(&other.state)
+            x.eq(other.state.borrow().deref().get_ref())
         }
     }
 
     pub struct Node<'a, N: 'a, C: 'a> {
-        pub state: N,
+        pub state: RefCell<Option<N>>,
         pub parent: RefCell<Option<&'a Node<'a, N, C>>>,
         pub cost: RefCell<C>,
         pub cost_with_heuristic: RefCell<C>
@@ -33,14 +33,14 @@ mod node {
     impl <'a, N, C> Hash for Node<'a, N, C>
     where N: Hash {
         fn hash(&self, hash_state: &mut SipState) {
-            self.state.hash(hash_state);
+            self.state.borrow().get_ref().hash(hash_state);
         }
     }
 
     impl <'a, N, C> PartialEq for Node<'a, N, C>
     where N: PartialEq {
         fn eq(&self, other: &Node<'a, N, C>) -> bool {
-            self.state.eq(&other.state)
+            self.state.borrow().get_ref().eq(other.state.borrow().get_ref())
         }
     }
 
@@ -128,7 +128,7 @@ mod state {
 
         pub fn add(&'a self, n: N, cost: C, heur_cost: C) -> &'a Node<'a, N, C> {
             let node = Node {
-                state: n,
+                state: RefCell::new(Some(n)),
                 parent: RefCell::new(None),
                 cost: RefCell::new(cost),
                 cost_with_heuristic: RefCell::new(heur_cost)
@@ -172,14 +172,14 @@ pub trait SearchState<N, C> {
 }
 
 pub fn astar<N, C, S: SearchState<N, C>>(s: S) -> Option<Vec<N>>
-where N: Hash + PartialEq + Clone, C: PartialOrd + Zero + Clone {
+where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
     let state: state::AstarState<N, C> = state::AstarState::new();
     let mut end;
     state.add(s.start(), Zero::zero(), Zero::zero());
 
     loop {
         let current = match state.pop() {
-            Some(ref node) if s.is_end(&node.state) => {
+            Some(ref node) if s.is_end(node.state.borrow().get_ref()) => {
                 end = Some(*node);
                 break;
             }
@@ -189,12 +189,10 @@ where N: Hash + PartialEq + Clone, C: PartialOrd + Zero + Clone {
             }
         };
 
-        for (neighbor_state, cost) in s.neighbors(&current.state).into_iter() {
+        for (neighbor_state, cost) in s.neighbors(current.state.borrow().get_ref()).into_iter() {
             if state.is_closed(&neighbor_state) {
                 continue;
             }
-
-            //println!("{:?} at {:?}", neighbor_state, cost);
 
             let tentative_g_score = *current.cost.borrow() + cost;
 
@@ -222,7 +220,7 @@ where N: Hash + PartialEq + Clone, C: PartialOrd + Zero + Clone {
     loop {
         match cur {
             Some(n) => {
-                path.push(n.state.clone());
+                path.push(n.state.borrow_mut().take().unwrap());
                 cur = *n.parent.borrow();
             }
             None => {
