@@ -19,7 +19,7 @@ mod node {
     impl <'a, 'b, N: PartialEq, C> Equiv<&'a Node<'a, N, C>> for DumbNode<'b, N> {
         fn equiv(&self, other: &&Node<'a, N, C>) -> bool {
             let DumbNode(x) = *self;
-            x.eq(other.state.borrow().deref().get_ref())
+            x.eq(other.state.borrow().deref().as_ref().unwrap())
         }
     }
 
@@ -33,14 +33,15 @@ mod node {
     impl <'a, N, C> Hash for Node<'a, N, C>
     where N: Hash {
         fn hash(&self, hash_state: &mut SipState) {
-            self.state.borrow().get_ref().hash(hash_state);
+            self.state.borrow().as_ref().unwrap().hash(hash_state);
         }
     }
 
     impl <'a, N, C> PartialEq for Node<'a, N, C>
     where N: PartialEq {
         fn eq(&self, other: &Node<'a, N, C>) -> bool {
-            self.state.borrow().get_ref().eq(other.state.borrow().get_ref())
+            self.state.borrow().as_ref().unwrap().eq(
+                other.state.borrow().as_ref().unwrap())
         }
     }
 
@@ -179,7 +180,7 @@ where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
 
     loop {
         let current = match state.pop() {
-            Some(ref node) if s.is_end(node.state.borrow().get_ref()) => {
+            Some(ref node) if s.is_end(node.state.borrow().as_ref().unwrap()) => {
                 end = Some(*node);
                 break;
             }
@@ -189,7 +190,8 @@ where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
             }
         };
 
-        for (neighbor_state, cost) in s.neighbors(current.state.borrow().get_ref()).into_iter() {
+        for (neighbor_state, cost) in s.neighbors(
+        current.state.borrow().as_ref().unwrap()).into_iter() {
             if state.is_closed(&neighbor_state) {
                 continue;
             }
