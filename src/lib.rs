@@ -212,7 +212,7 @@ mod state {
 /// be solved without any more information.
 /// N is the type of one of the search-states and
 /// C is the type of the cost to get from one state to another.
-pub trait SearchProblem<N, C> {
+pub trait SearchProblem<N, C, I: Iterator<(N, C)>> {
     /// A state representing the start of the search.
     fn start(&self) -> N;
     /// Check to see if a state is the goal state.
@@ -223,12 +223,14 @@ pub trait SearchProblem<N, C> {
     fn heuristic(&self, &N) -> C;
     /// A function returning the neighbors of a search state along
     /// with the cost to get to that state.
-    fn neighbors(&self, at: &N) -> Vec<(N, C)>;
+    fn neighbors(&self, at: &N) -> I;
 }
 
 /// Perform an A* search on the provided search-problem.
-pub fn astar<N, C, S: SearchProblem<N, C>>(s: S) -> Option<RingBuf<N>>
-where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
+pub fn astar<N, C, I, S: SearchProblem<N, C, I>>(s: S) -> Option<RingBuf<N>>
+where N: Hash + PartialEq,
+      C: PartialOrd + Zero + Clone,
+      I: Iterator<(N, C)> {
     // Start out with a search-state that contains the beginning
     // node with cost zero.  Heuristic cost is also zero, but  this
     // shouldn't matter as it will be removed from the priority queue instantly.
@@ -256,7 +258,7 @@ where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
         // either add it to the problem state, or update it if
         // necessary.
         for (neighbor_state, cost) in s.neighbors(
-        current.state.borrow().as_ref().unwrap()).into_iter() {
+        current.state.borrow().as_ref().unwrap()) {
             if state.is_closed(&neighbor_state) {
                 continue;
             }
