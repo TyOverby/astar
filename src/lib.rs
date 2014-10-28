@@ -2,6 +2,8 @@ extern crate arena;
 
 use std::hash::Hash;
 use std::num::Zero;
+use std::collections::Deque;
+use std::collections::ringbuf::RingBuf;
 
 #[cfg(test)]
 mod test;
@@ -225,7 +227,7 @@ pub trait SearchProblem<N, C> {
 }
 
 /// Perform an A* search on the provided search-problem.
-pub fn astar<N, C, S: SearchProblem<N, C>>(s: S) -> Option<Vec<N>>
+pub fn astar<N, C, S: SearchProblem<N, C>>(s: S) -> Option<RingBuf<N>>
 where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
     // Start out with a search-state that contains the beginning
     // node with cost zero.  Heuristic cost is also zero, but  this
@@ -284,11 +286,11 @@ where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
     // to the end.  Construct this path by traversing backwards from the end
     // back to the start via the parent property.
     let mut cur = end;
-    let mut path = vec![];
+    let mut path = RingBuf::new();
     loop {
         match cur {
             Some(n) => {
-                path.push(n.state.borrow_mut().take().unwrap());
+                path.push_front(n.state.borrow_mut().take().unwrap());
                 cur = *n.parent.borrow();
             }
             None => {

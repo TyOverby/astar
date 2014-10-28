@@ -1,12 +1,13 @@
-use super::{astar, SearchState};
+use super::{astar, SearchProblem};
 use std::iter::range_inclusive;
+use std::collections::RingBuf;
 
 struct GridState {
     start: (i32, i32),
     end: (i32, i32)
 }
 
-impl SearchState<(i32, i32), i32> for GridState {
+impl SearchProblem<(i32, i32), i32> for GridState {
     fn start(&self) -> (i32, i32) { self.start }
     fn is_end(&self, p: &(i32, i32)) -> bool { *p == self.end }
     fn heuristic(&self, &(p_x, p_y): &(i32, i32)) -> i32 {
@@ -26,7 +27,7 @@ impl SearchState<(i32, i32), i32> for GridState {
     }
 }
 
-fn path(start: (i32, i32), end: (i32, i32)) -> Option<Vec<(i32, i32)>> {
+fn path(start: (i32, i32), end: (i32, i32)) -> Option<RingBuf<(i32, i32)>> {
     let gs = GridState{ start: start, end: end };
     astar(gs)
 }
@@ -51,17 +52,17 @@ fn test_iter() {
 #[test]
 fn test_start_end() {
     let p = path((0,0), (0,0)).unwrap();
-    assert!(p == vec![(0, 0)]);
+    assert!(p == vec![(0, 0)].into_iter().collect());
 }
 
 #[test]
 fn test_next() {
     let p = path((0,0), (0,1)).unwrap();
-    assert!(p == vec![(0,1), (0,0)]);
+    assert!(p == vec![(0,0), (0,1)].into_iter().collect());
 }
 
 #[test]
 fn test_few() {
     let p = path((0,0), (0,4)).unwrap();
-    assert!(p == vec![(0,4), (0,3) ,(0,2), (0,1), (0,0)]);
+    assert!(p == vec![(0,0), (0,1) ,(0,2), (0,3), (0,4)].into_iter().collect());
 }
