@@ -12,6 +12,9 @@ mod node {
     use std::hash::sip::SipState;
     use std::cmp::Equiv;
 
+    /// DumbNode is used so that we can look up entire Node instances
+    /// out of a hashmap even if we only have the state.  This feels
+    /// like an awful hack, and it probably is.
     #[deriving(Hash)]
     pub struct DumbNode<'b, N: 'b>(pub &'b N);
 
@@ -22,14 +25,25 @@ mod node {
         }
     }
 
+    /// The main node structure.  It is effectively a wrapper around a
+    /// state with some metadata associated with it.
     pub struct Node<'a, N: 'a, C: 'a> {
+        /// The user-provided state.
         pub state: RefCell<Option<N>>,
+        /// The node wrapping around the state that this
+        /// node came from.  Used for backwards traversals.
         pub parent: RefCell<Option<&'a Node<'a, N, C>>>,
+        /// If the node is currently in the open set.
+        /// A node must either be open or closed.
         pub open: RefCell<bool>,
+        /// The cost to get to this node.
         pub cost: RefCell<C>,
+        /// The cost to get to this node plus the
+        /// expected cost to get to the goal.
         pub cost_with_heuristic: RefCell<C>
     }
 
+    // Only hash the state.
     impl <'a, N, C> Hash for Node<'a, N, C>
     where N: Hash {
         fn hash(&self, hash_state: &mut SipState) {
@@ -37,6 +51,7 @@ mod node {
         }
     }
 
+    // Only compare the state.
     impl <'a, N, C> PartialEq for Node<'a, N, C>
     where N: PartialEq {
         fn eq(&self, other: &Node<'a, N, C>) -> bool {
@@ -52,6 +67,8 @@ mod wrap {
     use std::cmp::{Ordering, Equal};
     use super::node::Node;
 
+    /// A wrapper around a reference to a node.
+    /// This is only used when placed inside the priority queue.
     pub struct WrappedNode<'a, N: 'a, C:'a> {
         pub node: &'a Node<'a, N, C>
     }
@@ -64,11 +81,12 @@ mod wrap {
         }
     }
 
+    // Only compare heuristic costs.
     impl <'a, N, C> PartialEq for WrappedNode<'a, N, C>
     where C: PartialEq {
         fn eq(&self, other: &WrappedNode<'a, N, C>) -> bool {
-            let this_cost = self.node.cost.borrow();
-            let that_cost = other.node.cost.borrow();
+            let this_cost = self.node.cost_with_heuristic.borrow();
+            let that_cost = other.node.cost_with_heuristic.borrow();
             *this_cost == *that_cost
         }
     }
@@ -80,7 +98,8 @@ mod wrap {
         fn partial_cmp(&self, other: &WrappedNode<'a, N, C>) -> Option<Ordering> {
             let this_cost = self.node.cost_with_heuristic.borrow();
             let that_cost = other.node.cost_with_heuristic.borrow();
-            // Match backwards for the priority queue.
+            // Match backwards so that the priority queue
+            // prioritizes minimal values.
             (*that_cost).partial_cmp(&*this_cost)
         }
     }
@@ -90,7 +109,8 @@ mod wrap {
         fn cmp(&self, other: &WrappedNode<'a, N, C>) -> Ordering {
             let this_cost = self.node.cost_with_heuristic.borrow();
             let that_cost = other.node.cost_with_heuristic.borrow();
-            // Match backwards for the priority queue.
+            // Match backwards so that the priority queue
+            // prioritizes minimal values.
             match (*that_cost).partial_cmp(&*this_cost) {
                 None => Equal,
                 Some(x) => x
@@ -101,17 +121,25 @@ mod wrap {
 
 mod state {
     use arena::TypedArena;
-    use super::node::Node;
-    use super::node::DumbNode;
+    use super::node::{Node, DumbNode};
     use super::wrap::WrappedNode as Wnode;
-    use std::collections::PriorityQueue;
+    use std::collections::{PriorityQueue, HashMap};
     use std::cell::RefCell;
     use std::hash::Hash;
-    use std::collections::HashMap;
 
+    /// The place where all of the information about the
+    /// current A* process is held.
+    /// N is the type of the user-provided state, and
+    /// C is the type of the user-provided cost.
     pub struct AstarState<'a, N: 'a, C: 'a> {
+        /// The arena that all nodes are allocated from.
         pub arena: TypedArena<Node<'a, N, C>>,
+        /// The priority queue that orders nodes in increasing
+        /// cost + heuristic.
         pub queue: RefCell<PriorityQueue<Wnode<'a, N, C>>>,
+        /// A hashmap of all of the nodes that we've visited recently.
+        /// This should be a hashset, but rust won't let me grab keys
+        /// from a hashset and mutate them.
         pub seen: RefCell<HashMap<&'a Node<'a, N, C>, &'a Node<'a, N, C>>>,
     }
 
@@ -125,6 +153,9 @@ mod state {
             }
         }
 
+        /// Creates a node from a state, a cost, and a cost + heuristic.
+        /// This node gets added to the set of open nodes, and gets added to
+        /// the priority queue.
         pub fn add(&'a self, n: N, cost: C, heur_cost: C) -> &'a Node<'a, N, C> {
             let node = Node {
                 state: RefCell::new(Some(n)),
@@ -142,6 +173,9 @@ mod state {
             node_ref
         }
 
+        /// Removes the node from the open set with the smallest
+        /// cost + heuristic.
+        /// Places the node in the closed set.
         pub fn pop(&'a self) -> Option<&'a Node<'a, N, C>> {
             let node = self.queue.borrow_mut().pop().map(|w| w.node);
             match node {
@@ -153,6 +187,7 @@ mod state {
             node
         }
 
+        /// Returns true if the node with a given state is in the closed set.
         pub fn is_closed(&self, state: &N) -> bool {
             match self.seen.borrow().find_equiv(&DumbNode(state)) {
                 Some(node) => *node.open.borrow(),
@@ -160,6 +195,7 @@ mod state {
             }
         }
 
+        /// Returns a node with a given state if that node exists and is open.
         pub fn find_open(&self, state: &N) -> Option<&'a Node<'a, N, C>> {
             match self.seen.borrow().find_equiv(&DumbNode(state)).map(|a| *a) {
                 Some(n) if *n.open.borrow() => Some(n),
@@ -169,14 +205,27 @@ mod state {
     }
 }
 
-pub trait SearchState<N, C> {
+/// A SearchProblem is a description of the problem that will be solved with A*.
+/// Implementing this trait will describe the problem well enough that it can
+/// be solved without any more information.
+/// N is the type of one of the search-states and
+/// C is the type of the cost to get from one state to another.
+pub trait SearchProblem<N, C> {
+    /// A state representing the start of the search.
     fn start(&self) -> N;
+    /// Check to see if a state is the goal state.
     fn is_end(&self, &N) -> bool;
+    /// A function that estimates the cost to get from
+    /// a node to the end.
+    /// heuristic(end_state) should always be 0.
     fn heuristic(&self, &N) -> C;
+    /// A function returning the neighbors of a search state along
+    /// with the cost to get to that state.
     fn neighbors(&self, at: &N) -> Vec<(N, C)>;
 }
 
-pub fn astar<N, C, S: SearchState<N, C>>(s: S) -> Option<Vec<N>>
+/// Perform an A* search on the provided search-state.
+pub fn astar<N, C, S: SearchProblem<N, C>>(s: S) -> Option<Vec<N>>
 where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
     let state: state::AstarState<N, C> = state::AstarState::new();
     let mut end;
