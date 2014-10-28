@@ -1,5 +1,4 @@
 extern crate arena;
-extern crate debug;
 
 use std::hash::Hash;
 use std::num::Zero;
