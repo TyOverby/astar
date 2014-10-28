@@ -224,25 +224,35 @@ pub trait SearchProblem<N, C> {
     fn neighbors(&self, at: &N) -> Vec<(N, C)>;
 }
 
-/// Perform an A* search on the provided search-state.
+/// Perform an A* search on the provided search-problem.
 pub fn astar<N, C, S: SearchProblem<N, C>>(s: S) -> Option<Vec<N>>
 where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
+    // Start out with a search-state that contains the beginning
+    // node with cost zero.  Heuristic cost is also zero, but  this
+    // shouldn't matter as it will be removed from the priority queue instantly.
     let state: state::AstarState<N, C> = state::AstarState::new();
-    let mut end;
     state.add(s.start(), Zero::zero(), Zero::zero());
+    let mut end;
 
     loop {
+        // Find the node with the smallest heuristic distance.
         let current = match state.pop() {
+            // If we find the end node, start reconstructing the path.
             Some(ref node) if s.is_end(node.state.borrow().as_ref().unwrap()) => {
                 end = Some(*node);
                 break;
             }
             Some(node) => node,
+            // If there are no more nodes in the queue, we have failed to
+            // find a path.
             None => {
                 return None;
             }
         };
 
+        // Go through each neighbor to the current node and
+        // either add it to the problem state, or update it if
+        // necessary.
         for (neighbor_state, cost) in s.neighbors(
         current.state.borrow().as_ref().unwrap()).into_iter() {
             if state.is_closed(&neighbor_state) {
@@ -270,6 +280,9 @@ where N: Hash + PartialEq , C: PartialOrd + Zero + Clone {
         }
     }
 
+    // If we've reached this point, then a valid path exists from the start
+    // to the end.  Construct this path by traversing backwards from the end
+    // back to the start via the parent property.
     let mut cur = end;
     let mut path = vec![];
     loop {
