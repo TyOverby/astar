@@ -26,6 +26,7 @@ mod node {
     pub struct Node<'a, N: 'a, C: 'a> {
         pub state: RefCell<Option<N>>,
         pub parent: RefCell<Option<&'a Node<'a, N, C>>>,
+        pub open: RefCell<bool>,
         pub cost: RefCell<C>,
         pub cost_with_heuristic: RefCell<C>
     }
@@ -107,13 +108,12 @@ mod state {
     use std::collections::PriorityQueue;
     use std::cell::RefCell;
     use std::hash::Hash;
-    use std::collections::{HashSet, HashMap};
+    use std::collections::HashMap;
 
     pub struct AstarState<'a, N: 'a, C: 'a> {
         pub arena: TypedArena<Node<'a, N, C>>,
         pub queue: RefCell<PriorityQueue<Wnode<'a, N, C>>>,
-        pub open: RefCell<HashMap<&'a Node<'a, N, C>, &'a Node<'a, N, C>>>,
-        pub closed: RefCell<HashSet<&'a Node<'a, N, C>>>
+        pub seen: RefCell<HashMap<&'a Node<'a, N, C>, &'a Node<'a, N, C>>>,
     }
 
     impl <'a, N, C> AstarState<'a, N, C>
@@ -122,8 +122,7 @@ mod state {
             AstarState {
                 arena: TypedArena::new(),
                 queue: RefCell::new(PriorityQueue::new()),
-                open: RefCell::new(HashMap::new()),
-                closed: RefCell::new(HashSet::new())
+                seen: RefCell::new(HashMap::new())
             }
         }
 
@@ -132,13 +131,14 @@ mod state {
                 state: RefCell::new(Some(n)),
                 parent: RefCell::new(None),
                 cost: RefCell::new(cost),
+                open: RefCell::new(true),
                 cost_with_heuristic: RefCell::new(heur_cost)
             };
 
             let node_ref = self.arena.alloc(node);
             let wrapped = Wnode::new(node_ref);
             self.queue.borrow_mut().push(wrapped);
-            self.open.borrow_mut().insert(node_ref, node_ref);
+            self.seen.borrow_mut().insert(node_ref, node_ref);
 
             node_ref
         }
@@ -147,8 +147,7 @@ mod state {
             let node = self.queue.borrow_mut().pop().map(|w| w.node);
             match node {
                 Some(node) => {
-                    self.open.borrow_mut().remove(&node);
-                    self.closed.borrow_mut().insert(node);
+                    *node.open.borrow_mut() = false;
                 }
                 None => {}
             }
@@ -156,11 +155,17 @@ mod state {
         }
 
         pub fn is_closed(&self, state: &N) -> bool {
-            self.closed.borrow().contains_equiv(&DumbNode(state))
+            match self.seen.borrow().find_equiv(&DumbNode(state)) {
+                Some(node) => *node.open.borrow(),
+                None => false,
+            }
         }
 
         pub fn find_open(&self, state: &N) -> Option<&'a Node<'a, N, C>> {
-            self.open.borrow().find_equiv(&DumbNode(state)).map(|a| *a)
+            match self.seen.borrow().find_equiv(&DumbNode(state)).map(|a| *a) {
+                Some(n) if *n.open.borrow() => Some(n),
+                _ => None
+            }
         }
     }
 }
