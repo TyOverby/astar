@@ -224,6 +224,9 @@ pub trait SearchProblem<N, C, I: Iterator<(N, C)>> {
     /// A function returning the neighbors of a search state along
     /// with the cost to get to that state.
     fn neighbors(&self, at: &N) -> I;
+    /// This method is used if an estimated length of the path
+    /// is available.
+    fn estimate_length(&self) -> Option<uint> { None }
 }
 
 /// Perform an A* search on the provided search-problem.
@@ -288,7 +291,7 @@ where N: Hash + PartialEq,
     // to the end.  Construct this path by traversing backwards from the end
     // back to the start via the parent property.
     let mut cur = end;
-    let mut path = RingBuf::new();
+    let mut path = RingBuf::with_capacity(s.estimate_length().unwrap_or(16));
     loop {
         match cur {
             Some(n) => {
