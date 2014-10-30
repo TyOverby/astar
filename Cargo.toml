@@ -1,5 +1,5 @@
 [package]
 
-name = "astar_bump"
+name = "astar"
 version = "0.0.1"
 authors = ["Ty Overby <ty@pre-alpha.com>"]
