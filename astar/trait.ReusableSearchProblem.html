@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <meta name="description" content="API documentation for the Rust `SearchProblem` trait in crate `astar`.">
-    <meta name="keywords" content="rust, rustlang, rust-lang, SearchProblem">
+    <meta name="description" content="API documentation for the Rust `ReusableSearchProblem` trait in crate `astar`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ReusableSearchProblem">
 
-    <title>astar::SearchProblem - Rust</title>
+    <title>astar::ReusableSearchProblem - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../main.css">
 
@@ -26,7 +26,7 @@
 
     <section class="sidebar">
         
-        <p class='location'><a href='index.html'>astar</a></p><div class='block trait'><h2>Traits</h2><a class='trait ' href='trait.ReusableSearchProblem.html'>ReusableSearchProblem</a><a class='trait current' href='trait.SearchProblem.html'>SearchProblem</a></div><div class='block fn'><h2>Functions</h2><a class='fn ' href='fn.astar.html'>astar</a><a class='fn ' href='fn.astar_r.html'>astar_r</a></div>
+        <p class='location'><a href='index.html'>astar</a></p><div class='block trait'><h2>Traits</h2><a class='trait current' href='trait.ReusableSearchProblem.html'>ReusableSearchProblem</a><a class='trait ' href='trait.SearchProblem.html'>SearchProblem</a></div><div class='block fn'><h2>Functions</h2><a class='fn ' href='fn.astar.html'>astar</a><a class='fn ' href='fn.astar_r.html'>astar_r</a></div>
     </section>
 
     <nav class="sub">
@@ -41,28 +41,22 @@
     </nav>
 
     <section id='main' class="content trait">
-<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>astar</a>::<wbr><a class='trait' href=''>SearchProblem</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>astar</a>::<wbr><a class='trait' href=''>ReusableSearchProblem</a><wbr></span><span class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]
             </a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-943' href='../src/astar/home/ty/workspace/rust/astar_bump/src/lib.rs.html#231-246'>[src]</a></span></h1>
-<pre class='rust trait'>pub trait SearchProblem&lt;N, C, I: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(N, C)</a>&gt;&gt; {
-    fn <a href='#tymethod.start' class='fnname'>start</a>(&amp;self) -&gt; N;
-    fn <a href='#tymethod.is_end' class='fnname'>is_end</a>(&amp;self, &amp;N) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>;
+        </span><a id='src-1008' href='../src/astar/home/ty/workspace/rust/astar_bump/src/lib.rs.html#251-262'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait ReusableSearchProblem&lt;N, C, I: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(N, C)</a>&gt;&gt; {
     fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;N) -&gt; C;
     fn <a href='#tymethod.neighbors' class='fnname'>neighbors</a>(&amp;self, at: &amp;N) -&gt; I;
 
     fn <a href='#method.estimate_length' class='fnname'>estimate_length</a>(&amp;self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.uint.html'>uint</a>&gt; { ... }
-}</pre><div class='docblock'><p>A SearchProblem is a description of the problem that will be solved with A*.
-Implementing this trait will describe the problem well enough that it can
-be solved without any more information.
-N is the type of one of the search-states and
-C is the type of the cost to get from one state to another.</p>
+}</pre><div class='docblock'><p>ReusableSearchProblem is like a regular SearchProblem but without
+the <code>start()</code> and <code>is_end()</code> checks.  Instead, the start and end
+will be provided when <code>astar_r()</code> is called.</p>
 </div>
             <h2 id='required-methods'>Required Methods</h2>
             <div class='methods'>
-        <h3 id='tymethod.start' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.start' class='fnname'>start</a>(&amp;self) -&gt; N</code></h3><div class='docblock'><p>A state representing the start of the search.</p>
-</div><h3 id='tymethod.is_end' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.is_end' class='fnname'>is_end</a>(&amp;self, &amp;N) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h3><div class='docblock'><p>Check to see if a state is the goal state.</p>
-</div><h3 id='tymethod.heuristic' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;N) -&gt; C</code></h3><div class='docblock'><p>A function that estimates the cost to get from
+        <h3 id='tymethod.heuristic' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;N) -&gt; C</code></h3><div class='docblock'><p>A function that estimates the cost to get from
 a node to the end.
 heuristic(end_state) should always be 0.</p>
 </div><h3 id='tymethod.neighbors' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.neighbors' class='fnname'>neighbors</a>(&amp;self, at: &amp;N) -&gt; I</code></h3><div class='docblock'><p>A function returning the neighbors of a search state along
@@ -76,7 +70,7 @@ is available.</p>
         <h2 id='implementors'>Implementors</h2>
         <ul class='item-list' id='implementors-list'>
     </ul><script type="text/javascript" async
-                              src="../implementors/astar/trait.SearchProblem.js">
+                              src="../implementors/astar/trait.ReusableSearchProblem.js">
                       </script></section>
     <section id='search' class="content hidden"></section>
 

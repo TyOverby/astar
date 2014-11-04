@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <meta name="description" content="API documentation for the Rust `astar` fn in crate `astar`.">
-    <meta name="keywords" content="rust, rustlang, rust-lang, astar">
+    <meta name="description" content="API documentation for the Rust `astar_r` fn in crate `astar`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, astar_r">
 
-    <title>astar::astar - Rust</title>
+    <title>astar::astar_r - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../main.css">
 
@@ -26,7 +26,7 @@
 
     <section class="sidebar">
         
-        <p class='location'><a href='index.html'>astar</a></p><div class='block trait'><h2>Traits</h2><a class='trait ' href='trait.ReusableSearchProblem.html'>ReusableSearchProblem</a><a class='trait ' href='trait.SearchProblem.html'>SearchProblem</a></div><div class='block fn'><h2>Functions</h2><a class='fn current' href='fn.astar.html'>astar</a><a class='fn ' href='fn.astar_r.html'>astar_r</a></div>
+        <p class='location'><a href='index.html'>astar</a></p><div class='block trait'><h2>Traits</h2><a class='trait ' href='trait.ReusableSearchProblem.html'>ReusableSearchProblem</a><a class='trait ' href='trait.SearchProblem.html'>SearchProblem</a></div><div class='block fn'><h2>Functions</h2><a class='fn ' href='fn.astar.html'>astar</a><a class='fn current' href='fn.astar_r.html'>astar_r</a></div>
     </section>
 
     <nav class="sub">
@@ -41,12 +41,11 @@
     </nav>
 
     <section id='main' class="content fn">
-<h1 class='fqn'><span class='in-band'>Function <a href='index.html'>astar</a>::<wbr><a class='fn' href=''>astar</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Function <a href='index.html'>astar</a>::<wbr><a class='fn' href=''>astar_r</a><wbr></span><span class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]
             </a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-1054' href='../src/astar/home/ty/workspace/rust/astar_bump/src/lib.rs.html#265-338'>[src]</a></span></h1>
-<pre class='rust fn'>pub fn astar&lt;N, C, I, S: <a class='trait' href='../astar/trait.SearchProblem.html' title='astar::SearchProblem'>SearchProblem</a>&lt;N, C, I&gt;&gt;(s: S) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/collections/ringbuf/struct.RingBuf.html' title='collections::ringbuf::RingBuf'>RingBuf</a>&lt;N&gt;&gt; where N: <a class='trait' href='http://doc.rust-lang.org/nightly/collections/hash/trait.Hash.html' title='collections::hash::Hash'>Hash</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a>, C: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html' title='core::cmp::PartialOrd'>PartialOrd</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/num/trait.Zero.html' title='core::num::Zero'>Zero</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, I: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(N, C)</a>&gt;</pre><div class='docblock'><p>Perform an A* search on the provided search-problem.</p>
-</div></section>
+        </span><a id='src-1317' href='../src/astar/home/ty/workspace/rust/astar_bump/src/lib.rs.html#340-352'>[src]</a></span></h1>
+<pre class='rust fn'>pub fn astar_r&lt;N, C, I, S: <a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>ReusableSearchProblem</a>&lt;N, C, I&gt;&gt;(s: &amp;S, start: N, end: N) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/collections/ringbuf/struct.RingBuf.html' title='collections::ringbuf::RingBuf'>RingBuf</a>&lt;N&gt;&gt; where N: <a class='trait' href='http://doc.rust-lang.org/nightly/collections/hash/trait.Hash.html' title='collections::hash::Hash'>Hash</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a>, C: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html' title='core::cmp::PartialOrd'>PartialOrd</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/num/trait.Zero.html' title='core::num::Zero'>Zero</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, I: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(N, C)</a>&gt;</pre></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>
