@@ -3,8 +3,7 @@ extern crate arena;
 use std::hash::Hash;
 use std::cell::RefCell;
 use std::num::Zero;
-use std::collections::Deque;
-use std::collections::ringbuf::RingBuf;
+use std::collections::RingBuf;
 
 #[cfg(test)]
 mod test;
@@ -126,7 +125,7 @@ mod state {
     use arena::TypedArena;
     use super::node::{Node, DumbNode};
     use super::wrap::WrappedNode as Wnode;
-    use std::collections::{PriorityQueue, HashMap};
+    use std::collections::{BinaryHeap, HashMap};
     use std::cell::RefCell;
     use std::hash::Hash;
 
@@ -139,7 +138,7 @@ mod state {
         pub arena: TypedArena<Node<'a, N, C>>,
         /// The priority queue that orders nodes in increasing
         /// cost + heuristic.
-        pub queue: RefCell<PriorityQueue<Wnode<'a, N, C>>>,
+        pub queue: RefCell<BinaryHeap<Wnode<'a, N, C>>>,
         /// A hashmap of all of the nodes that we've visited recently.
         /// This should be a hashset, but rust won't let me grab keys
         /// from a hashset and mutate them.
@@ -151,7 +150,7 @@ mod state {
         pub fn new() -> AstarState<'a, N, C> {
             AstarState {
                 arena: TypedArena::new(),
-                queue: RefCell::new(PriorityQueue::new()),
+                queue: RefCell::new(BinaryHeap::new()),
                 seen: RefCell::new(HashMap::new())
             }
         }
