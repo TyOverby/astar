@@ -1,5 +1,9 @@
 [package]
-
 name = "astar"
 version = "0.0.1"
 authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+repository = "https://github.com/TyOverby/astar"
+documentation = "http://tyoverby.com/astar/astar/"
+keywords = ["a*", "a star", "astar", "search",
+            "path", "pathfinding", "path finding"]
