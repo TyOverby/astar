@@ -8,12 +8,20 @@ struct GridState {
     end: (i32, i32)
 }
 
+fn abs(x: i32) -> i32 {
+    if x < 0 {
+        -x
+    } else {
+        x
+    }
+}
+
 impl SearchProblem<(i32, i32), i32, MoveItems<((i32, i32), i32)>> for GridState {
     fn start(&self) -> (i32, i32) { self.start }
     fn is_end(&self, p: &(i32, i32)) -> bool { *p == self.end }
     fn heuristic(&self, &(p_x, p_y): &(i32, i32)) -> i32 {
         let (s_x, s_y) = self.end;
-        (s_x - p_x).abs() + (s_y - p_y).abs()
+        abs(s_x - p_x) + abs(s_y - p_y)
     }
     fn neighbors(&self, &(x, y): &(i32, i32)) -> MoveItems<((i32, i32), i32)> {
         let mut vec = vec![];
