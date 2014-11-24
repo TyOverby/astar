@@ -1,5 +1,13 @@
 [package]
-
 name = "astar"
 version = "0.0.1"
 authors = ["Ty Overby <ty@pre-alpha.com>"]
+
+repository = "https://github.com/TyOverby/astar"
+documentation = "http://tyoverby.com/astar/astar/"
+keywords = ["astar", "search", "path", "pathfinding"]
+license = "MIT"
+description = "A generic implementation of the A* pathfinding algorithm."
+
+[dependencies]
+num = "*"

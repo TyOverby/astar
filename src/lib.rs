@@ -1,90 +1,159 @@
-use std::collections::PriorityQueue;
-use std::collections::HashSet;
-use std::collections::HashMap;
+extern crate arena;
+extern crate num;
+
 use std::hash::Hash;
-use std::num::Num;
-use std::num::Zero;
+use std::cell::RefCell;
+use std::collections::RingBuf;
+use num::Zero;
 
-use node_wrapper::NodeWrapper as Nwrap;
+#[cfg(test)]
+mod test;
+mod node;
+mod wrap;
+mod state;
 
-// Required for making a min-heap
-mod reverse_ord;
-mod node_wrapper;
-
-pub trait SearchState<N, C> {
-    fn start(&self) -> N;
-    fn end(&self) -> N;
-    fn heuristic(&self, from: &N) -> C;
-    fn neighbors(&self, at: &N) -> Vec<(N, C)>;
+struct ReusableSearchProblemWrapper<'a, N, Rsp: 'a> {
+    start: RefCell<Option<N>>,
+    end: N,
+    rsp: &'a Rsp
 }
 
-pub trait Node: Hash + Clone + Eq {}
-pub trait Cost: Num + Zero + Ord + Clone {}
 
-pub fn astar<N, C, S: SearchState<N, C>>(s: S) -> Option<Vec<N>>
-where N: Hash + Clone + Eq, C: Num + Zero + Ord + Clone {
-    let start = s.start();
-    let end = s.end();
+impl <'a, N, C, I: Iterator<(N, C)>, Rsp> SearchProblem<N, C, I> for ReusableSearchProblemWrapper<'a, N, Rsp>
+where N: PartialEq, Rsp: ReusableSearchProblem<N, C, I>
+{
+    fn start(&self) -> N { return self.start.borrow_mut().take().unwrap() }
+    fn is_end(&self, node: &N) -> bool { (&self.end) == node }
+    fn heuristic(&self, node: &N) -> C { self.rsp.heuristic(node) }
+    fn neighbors(&self, node: &N) -> I { self.rsp.neighbors(node) }
+}
 
-    let mut closed_set: HashSet<N> = HashSet::new();
-    let mut open_set = HashSet::new();
-    let mut open_queue = PriorityQueue::new();
-    let mut g_score = HashMap::new();
-    let mut f_score = HashMap::new();
-    let mut came_from = HashMap::new();
+/// A SearchProblem is a description of the problem that will be solved with A*.
+/// Implementing this trait will describe the problem well enough that it can
+/// be solved without any more information.
+/// N is the type of one of the search-states and
+/// C is the type of the cost to get from one state to another.
+pub trait SearchProblem<N, C, I: Iterator<(N, C)>> {
+    /// A state representing the start of the search.
+    fn start(&self) -> N;
+    /// Check to see if a state is the goal state.
+    fn is_end(&self, &N) -> bool;
+    /// A function that estimates the cost to get from
+    /// a node to the end.
+    /// heuristic(end_state) should always be 0.
+    fn heuristic(&self, &N) -> C;
+    /// A function returning the neighbors of a search state along
+    /// with the cost to get to that state.
+    fn neighbors(&self, at: &N) -> I;
+    /// This method is used if an estimated length of the path
+    /// is available.
+    fn estimate_length(&self) -> Option<uint> { None }
+}
 
-    open_set.insert(start.clone());
-    let zero: C = Zero::zero();
-    open_queue.push(Nwrap::new(start.clone(), zero.clone()));
-    g_score.insert(start.clone(), zero);
-    f_score.insert(start.clone(), s.heuristic(&start));
+/// ReusableSearchProblem is like a regular SearchProblem but without
+/// the `start()` and `is_end()` checks.  Instead, the start and end
+/// will be provided when `astar_r()` is called.
+pub trait ReusableSearchProblem<N, C, I: Iterator<(N, C)>> {
+    /// A function that estimates the cost to get from
+    /// a node to the end.
+    /// heuristic(end_state) should always be 0.
+    fn heuristic(&self, &N) -> C;
+    /// A function returning the neighbors of a search state along
+    /// with the cost to get to that state.
+    fn neighbors(&self, at: &N) -> I;
+    /// This method is used if an estimated length of the path
+    /// is available.
+    fn estimate_length(&self) -> Option<uint> { None }
+}
+
+/// Perform an A* search on the provided search-problem.
+pub fn astar<N, C, I, S: SearchProblem<N, C, I>>(s: S) -> Option<RingBuf<N>>
+where N: Hash + PartialEq,
+      C: PartialOrd + Zero + Clone,
+      I: Iterator<(N, C)> {
+    // Start out with a search-state that contains the beginning
+    // node with cost zero.  Heuristic cost is also zero, but  this
+    // shouldn't matter as it will be removed from the priority queue instantly.
+    let state: state::AstarState<N, C> = state::AstarState::new();
+    state.add(s.start(), Zero::zero(), Zero::zero());
+    let mut end;
 
     loop {
-        let current = match open_queue.pop() {
-            Some(Nwrap{n: ref x, ..}) if x == &end => { break; }
-            Some(Nwrap{n: x, ..}) => x,
-            None => { return None; }
+        // Find the node with the smallest heuristic distance.
+        let current = match state.pop() {
+            // If we find the end node, start reconstructing the path.
+            Some(ref node) if s.is_end(node.state.borrow().as_ref().unwrap()) => {
+                end = Some(*node);
+                break;
+            }
+            Some(node) => node,
+            // If there are no more nodes in the queue, we have failed to
+            // find a path.
+            None => {
+                return None;
+            }
         };
-        open_set.remove(&current);
-        closed_set.insert(current.clone());
 
-        for (neighbor, dist) in s.neighbors(&current).into_iter() {
-            if closed_set.contains(&neighbor) {
+        // Go through each neighbor to the current node and
+        // either add it to the problem state, or update it if
+        // necessary.
+        for (neighbor_state, cost) in s.neighbors(
+        current.state.borrow().as_ref().unwrap()) {
+            if state.is_closed(&neighbor_state) {
                 continue;
             }
-            let tentative_g_score = g_score[current.clone()] + dist;
-            if open_set.contains(&neighbor) ||
-               !g_score.contains_key(&neighbor) ||
-                g_score[neighbor.clone()] > tentative_g_score.clone() {
 
-                came_from.insert(neighbor.clone(), current.clone());
-                g_score.insert(neighbor.clone(), tentative_g_score.clone());
-                let total = tentative_g_score + s.heuristic(&neighbor);
-                f_score.insert(neighbor.clone(), total.clone());
-                if open_set.contains(&neighbor) {
-                    open_set.insert(neighbor.clone());
-                    open_queue.push(Nwrap::new(neighbor, total));
+            let tentative_g_score = *current.cost.borrow() + cost;
+
+            match state.find_open(&neighbor_state) {
+                Some(n) if *n.cost.borrow() < tentative_g_score.clone() => {
+                    *n.cost.borrow_mut() = tentative_g_score.clone();
+                    let heur = s.heuristic(&neighbor_state);
+                    *n.cost_with_heuristic.borrow_mut() = tentative_g_score + heur;
+                    *n.parent.borrow_mut() = Some(current)
                 }
-            }
+                Some(_) => {}
+                None => {
+                    let heur = s.heuristic(&neighbor_state);
+                    let n = state.add(neighbor_state,
+                                  tentative_g_score.clone(),
+                                  tentative_g_score + heur);
+                    *n.parent.borrow_mut() = Some(current)
+                }
+            };
         }
     }
 
-    let mut path = vec![];
-    let mut cur = Some(end);
-
+    // If we've reached this point, then a valid path exists from the start
+    // to the end.  Construct this path by traversing backwards from the end
+    // back to the start via the parent property.
+    let mut cur = end;
+    let mut path = RingBuf::with_capacity(s.estimate_length().unwrap_or(16));
     loop {
-        match cur.take() {
-            Some(ref node) if *node == start => {
-                path.push(start);
-                path.reverse();
+        match cur {
+            Some(n) => {
+                path.push_front(n.state.borrow_mut().take().unwrap());
+                cur = *n.parent.borrow();
+            }
+            None => {
                 return Some(path);
             }
-            Some(node) => {
-                cur = came_from.pop(&node);
-                path.push(node);
-            }
-            None => return None
         }
-
     }
 }
+
+pub fn astar_r<N, C, I, S: ReusableSearchProblem<N, C, I>>(s: &S, start: N, end: N) -> Option<RingBuf<N>>
+where N: Hash + PartialEq,
+      C: PartialOrd + Zero + Clone,
+      I: Iterator<(N, C)>
+{
+    let rspw = ReusableSearchProblemWrapper {
+        start: RefCell::new(Some(start)),
+        end: end,
+        rsp: s
+    };
+
+    astar(rspw)
+}
+
+
