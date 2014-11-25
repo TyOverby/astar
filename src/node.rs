@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::hash::Hash;
 use std::hash::sip::SipState;
-use std::cmp::Equiv;
 
 /// DumbNode is used so that we can look up entire Node instances
 /// out of a hashmap even if we only have the state.  This feels
@@ -9,12 +8,15 @@ use std::cmp::Equiv;
 #[deriving(Hash)]
 pub struct DumbNode<'b, N: 'b>(pub &'b N);
 
-impl <'a, 'b, N: PartialEq, C> Equiv<&'a Node<'a, N, C>> for DumbNode<'b, N> {
-    fn equiv(&self, other: &&Node<'a, N, C>) -> bool {
-        let DumbNode(x) = *self;
-        x.eq(other.state.borrow().deref().as_ref().unwrap())
+impl <'a, A> PartialEq for DumbNode<'a, A> where A: PartialEq {
+    fn eq<'b>(&self, other: &DumbNode<'b, A>) -> bool {
+        let &DumbNode(me) = self;
+        let &DumbNode(other) = other;
+        me == other
     }
 }
+
+impl <'a, A> Eq for DumbNode<'a, A> where A: PartialEq {}
 
 /// The main node structure.  It is effectively a wrapper around a
 /// state with some metadata associated with it.

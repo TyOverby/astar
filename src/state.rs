@@ -1,6 +1,7 @@
 use arena::TypedArena;
 use super::node::{Node, DumbNode};
 use super::wrap::WrappedNode as Wnode;
+use std::intrinsics::transmute;
 use std::collections::{BinaryHeap, HashMap};
 use std::cell::RefCell;
 use std::hash::Hash;
@@ -18,7 +19,7 @@ pub struct AstarState<'a, N: 'a, C: 'a> {
     /// A hashmap of all of the nodes that we've visited recently.
     /// This should be a hashset, but rust won't let me grab keys
     /// from a hashset and mutate them.
-    pub seen: RefCell<HashMap<&'a Node<'a, N, C>, &'a Node<'a, N, C>>>,
+    pub seen: RefCell<HashMap<DumbNode<'a, N>, &'a Node<'a, N, C>>>,
 }
 
 impl <'a, N, C> AstarState<'a, N, C>
@@ -46,7 +47,8 @@ where N: Hash + PartialEq, C: PartialOrd {
         let node_ref = self.arena.alloc(node);
         let wrapped = Wnode::new(node_ref);
         self.queue.borrow_mut().push(wrapped);
-        self.seen.borrow_mut().insert(node_ref, node_ref);
+        let b = node_ref.state.borrow();
+        self.seen.borrow_mut().insert(DumbNode(unsafe { transmute(b.as_ref().unwrap()) }), node_ref);
 
         node_ref
     }
@@ -66,16 +68,18 @@ where N: Hash + PartialEq, C: PartialOrd {
     }
 
     /// Returns true if the node with a given state is in the closed set.
-    pub fn is_closed(&self, state: &N) -> bool {
-        match self.seen.borrow().find_equiv(&DumbNode(state)) {
+    pub fn is_closed(&'a self, state: &N) -> bool {
+        let state = unsafe { transmute(state) };
+        match self.seen.borrow().get(&DumbNode(state)) {
             Some(node) => *node.open.borrow(),
             None => false,
         }
     }
 
     /// Returns a node with a given state if that node exists and is open.
-    pub fn find_open(&self, state: &N) -> Option<&'a Node<'a, N, C>> {
-        match self.seen.borrow().find_equiv(&DumbNode(state)).map(|a| *a) {
+    pub fn find_open(&'a self, state: &N) -> Option<&'a Node<'a, N, C>> {
+        let state = unsafe { transmute(state) };
+        match self.seen.borrow().get(&DumbNode(state)).map(|a| *a) {
             Some(n) if *n.open.borrow() => Some(n),
             _ => None
         }
