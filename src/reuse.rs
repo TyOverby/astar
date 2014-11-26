@@ -18,12 +18,15 @@ pub trait ReusableSearchProblem<N, C, I: Iterator<(N, C)>> {
     /// A function that estimates the cost to get from
     /// a node to the end.
     /// heuristic(end_state) should always be 0.
+    #[inline(always)]
     fn heuristic(&self, &N) -> C;
     /// A function returning the neighbors of a search state along
     /// with the cost to get to that state.
+    #[inline(always)]
     fn neighbors(&self, at: &N) -> I;
     /// This method is used if an estimated length of the path
     /// is available.
+    #[inline(always)]
     fn estimate_length(&self) -> Option<uint> { None }
 }
 
