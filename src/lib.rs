@@ -54,6 +54,7 @@ where N: Hash + PartialEq,
     // node with cost zero.  Heuristic cost is also zero, but  this
     // shouldn't matter as it will be removed from the priority queue instantly.
     let state: state::AstarState<N, C> = state::AstarState::new();
+    let est_length = s.estimate_length().unwrap_or(16);
     state.add(s.start(), Zero::zero(), Zero::zero());
     let mut end;
 
@@ -85,11 +86,11 @@ where N: Hash + PartialEq,
             let tentative_g_score = *current.cost.borrow() + cost;
 
             match state.find_open(&neighbor_state) {
-                Some(n) if *n.cost.borrow() < tentative_g_score.clone() => {
+                Some(n) if *n.cost.borrow() > tentative_g_score.clone() => {
                     *n.cost.borrow_mut() = tentative_g_score.clone();
                     let heur = s.heuristic(&neighbor_state);
                     *n.cost_with_heuristic.borrow_mut() = tentative_g_score + heur;
-                    *n.parent.borrow_mut() = Some(current)
+                    *n.parent.borrow_mut() = Some(current);
                 }
                 Some(_) => {}
                 None => {
@@ -97,7 +98,7 @@ where N: Hash + PartialEq,
                     let n = state.add(neighbor_state,
                                   tentative_g_score.clone(),
                                   tentative_g_score + heur);
-                    *n.parent.borrow_mut() = Some(current)
+                    *n.parent.borrow_mut() = Some(current);
                 }
             };
         }
@@ -107,7 +108,7 @@ where N: Hash + PartialEq,
     // to the end.  Construct this path by traversing backwards from the end
     // back to the start via the parent property.
     let mut cur = end;
-    let mut path = RingBuf::with_capacity(s.estimate_length().unwrap_or(16));
+    let mut path = RingBuf::with_capacity(est_length);
     loop {
         match cur {
             Some(n) => {

@@ -1,11 +1,10 @@
-use std::cell::RefCell;
 use std::collections::RingBuf;
 use std::vec::MoveItems;
 
 use super::{SearchProblem, astar};
 
 struct TwoDimSearchProblemWrapper<'a, Rsp: 'a> {
-    start: RefCell<Option<(i32, i32)>>,
+    start: (i32, i32),
     end: (i32, i32),
     rsp: &'a Rsp
 }
@@ -16,18 +15,19 @@ pub trait TwoDimSearchProblem {
     #[inline(always)]
     fn diag(&self) -> bool { false }
     #[inline(always)]
-    fn tween(&self) -> bool { false }
+    fn cut_corners(&self) -> bool { false }
 }
 
 impl <'a, Rsp: TwoDimSearchProblem> SearchProblem<(i32, i32), u32, MoveItems<((i32,i32), u32)>>
 for TwoDimSearchProblemWrapper<'a, Rsp> {
     fn start(&self) -> (i32, i32) {
-        self.start.borrow_mut().take().unwrap()
+        self.start
     }
     fn is_end(&self, node: &(i32, i32)) -> bool {
         (&self.end) == node
     }
     fn heuristic(&self, node: &(i32, i32)) -> u32 {
+        use std::cmp::max;
         fn abs(x: i32) -> i32 {
             if x < 0 { -x  } else { x }
         }
@@ -35,7 +35,8 @@ for TwoDimSearchProblemWrapper<'a, Rsp> {
         let (ex, ey) = self.end;
         let (dx, dy) = (ex - bx, ey - by);
 
-        (abs(dx) + abs(dy)) as u32
+        // Chebyshev Distance
+        (max(abs(dx), abs(dy)) * 2) as u32
     }
 
     fn estimate_length(&self) -> Option<uint> {
@@ -74,7 +75,7 @@ for TwoDimSearchProblemWrapper<'a, Rsp> {
             let zp = (x - 1, y - 1);
             let wp = (x + 1, y - 1);
 
-            if !self.rsp.tween() {
+            if !self.rsp.cut_corners() {
                 if a.is_some() && b.is_some() {
                     if let Some(p) = self.rsp.get(xp.0, xp.1) {
                         v.push((xp, p + 3));
@@ -122,7 +123,7 @@ pub fn astar_t<S>(s: &S, start: (i32, i32), end: (i32, i32)) -> Option<RingBuf<(
 S: TwoDimSearchProblem
 {
     let rspw = TwoDimSearchProblemWrapper {
-        start: RefCell::new(Some(start)),
+        start: start,
         end: end,
         rsp: s
     };

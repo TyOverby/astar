@@ -26,9 +26,9 @@ pub struct Node<'a, N: 'a, C: 'a> {
     /// The node wrapping around the state that this
     /// node came from.  Used for backwards traversals.
     pub parent: RefCell<Option<&'a Node<'a, N, C>>>,
-    /// If the node is currently in the open set.
-    /// A node must either be open or closed.
+
     pub open: RefCell<bool>,
+    pub closed: RefCell<bool>,
     /// The cost to get to this node.
     pub cost: RefCell<C>,
     /// The cost to get to this node plus the
