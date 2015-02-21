@@ -1,32 +1,22 @@
+#![feature(if_let, tuple_indexing)]
 extern crate arena;
 extern crate num;
 
 use std::hash::Hash;
-use std::cell::RefCell;
 use std::collections::RingBuf;
 use num::Zero;
+
+pub use reuse::{astar_r, ReusableSearchProblem};
+pub use two_dim::{astar_t, TwoDimSearchProblem};
 
 #[cfg(test)]
 mod test;
 mod node;
 mod wrap;
 mod state;
+mod reuse;
+mod two_dim;
 
-struct ReusableSearchProblemWrapper<'a, N, Rsp: 'a> {
-    start: RefCell<Option<N>>,
-    end: N,
-    rsp: &'a Rsp
-}
-
-
-impl <'a, N, C, I: Iterator<(N, C)>, Rsp> SearchProblem<N, C, I> for ReusableSearchProblemWrapper<'a, N, Rsp>
-where N: PartialEq, Rsp: ReusableSearchProblem<N, C, I>
-{
-    fn start(&self) -> N { return self.start.borrow_mut().take().unwrap() }
-    fn is_end(&self, node: &N) -> bool { (&self.end) == node }
-    fn heuristic(&self, node: &N) -> C { self.rsp.heuristic(node) }
-    fn neighbors(&self, node: &N) -> I { self.rsp.neighbors(node) }
-}
 
 /// A SearchProblem is a description of the problem that will be solved with A*.
 /// Implementing this trait will describe the problem well enough that it can
@@ -35,34 +25,23 @@ where N: PartialEq, Rsp: ReusableSearchProblem<N, C, I>
 /// C is the type of the cost to get from one state to another.
 pub trait SearchProblem<N, C, I: Iterator<(N, C)>> {
     /// A state representing the start of the search.
+    #[inline(always)]
     fn start(&self) -> N;
     /// Check to see if a state is the goal state.
+    #[inline(always)]
     fn is_end(&self, &N) -> bool;
     /// A function that estimates the cost to get from
     /// a node to the end.
     /// heuristic(end_state) should always be 0.
+    #[inline(always)]
     fn heuristic(&self, &N) -> C;
     /// A function returning the neighbors of a search state along
     /// with the cost to get to that state.
+    #[inline(always)]
     fn neighbors(&self, at: &N) -> I;
     /// This method is used if an estimated length of the path
     /// is available.
-    fn estimate_length(&self) -> Option<uint> { None }
-}
-
-/// ReusableSearchProblem is like a regular SearchProblem but without
-/// the `start()` and `is_end()` checks.  Instead, the start and end
-/// will be provided when `astar_r()` is called.
-pub trait ReusableSearchProblem<N, C, I: Iterator<(N, C)>> {
-    /// A function that estimates the cost to get from
-    /// a node to the end.
-    /// heuristic(end_state) should always be 0.
-    fn heuristic(&self, &N) -> C;
-    /// A function returning the neighbors of a search state along
-    /// with the cost to get to that state.
-    fn neighbors(&self, at: &N) -> I;
-    /// This method is used if an estimated length of the path
-    /// is available.
+    #[inline(always)]
     fn estimate_length(&self) -> Option<uint> { None }
 }
 
@@ -75,6 +54,7 @@ where N: Hash + PartialEq,
     // node with cost zero.  Heuristic cost is also zero, but  this
     // shouldn't matter as it will be removed from the priority queue instantly.
     let state: state::AstarState<N, C> = state::AstarState::new();
+    let est_length = s.estimate_length().unwrap_or(16);
     state.add(s.start(), Zero::zero(), Zero::zero());
     let mut end;
 
@@ -106,11 +86,11 @@ where N: Hash + PartialEq,
             let tentative_g_score = *current.cost.borrow() + cost;
 
             match state.find_open(&neighbor_state) {
-                Some(n) if *n.cost.borrow() < tentative_g_score.clone() => {
+                Some(n) if *n.cost.borrow() > tentative_g_score.clone() => {
                     *n.cost.borrow_mut() = tentative_g_score.clone();
                     let heur = s.heuristic(&neighbor_state);
                     *n.cost_with_heuristic.borrow_mut() = tentative_g_score + heur;
-                    *n.parent.borrow_mut() = Some(current)
+                    *n.parent.borrow_mut() = Some(current);
                 }
                 Some(_) => {}
                 None => {
@@ -118,7 +98,7 @@ where N: Hash + PartialEq,
                     let n = state.add(neighbor_state,
                                   tentative_g_score.clone(),
                                   tentative_g_score + heur);
-                    *n.parent.borrow_mut() = Some(current)
+                    *n.parent.borrow_mut() = Some(current);
                 }
             };
         }
@@ -128,7 +108,7 @@ where N: Hash + PartialEq,
     // to the end.  Construct this path by traversing backwards from the end
     // back to the start via the parent property.
     let mut cur = end;
-    let mut path = RingBuf::with_capacity(s.estimate_length().unwrap_or(16));
+    let mut path = RingBuf::with_capacity(est_length);
     loop {
         match cur {
             Some(n) => {
@@ -141,19 +121,3 @@ where N: Hash + PartialEq,
         }
     }
 }
-
-pub fn astar_r<N, C, I, S: ReusableSearchProblem<N, C, I>>(s: &S, start: N, end: N) -> Option<RingBuf<N>>
-where N: Hash + PartialEq,
-      C: PartialOrd + Zero + Clone,
-      I: Iterator<(N, C)>
-{
-    let rspw = ReusableSearchProblemWrapper {
-        start: RefCell::new(Some(start)),
-        end: end,
-        rsp: s
-    };
-
-    astar(rspw)
-}
-
-

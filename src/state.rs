@@ -41,6 +41,7 @@ where N: Hash + PartialEq, C: PartialOrd {
             parent: RefCell::new(None),
             cost: RefCell::new(cost),
             open: RefCell::new(true),
+            closed: RefCell::new(false),
             cost_with_heuristic: RefCell::new(heur_cost)
         };
 
@@ -61,6 +62,7 @@ where N: Hash + PartialEq, C: PartialOrd {
         match node {
             Some(node) => {
                 *node.open.borrow_mut() = false;
+                *node.closed.borrow_mut() = true;
             }
             None => {}
         }
@@ -71,7 +73,7 @@ where N: Hash + PartialEq, C: PartialOrd {
     pub fn is_closed(&'a self, state: &N) -> bool {
         let state = unsafe { transmute(state) };
         match self.seen.borrow().get(&DumbNode(state)) {
-            Some(node) => *node.open.borrow(),
+            Some(node) => *node.closed.borrow(),
             None => false,
         }
     }
