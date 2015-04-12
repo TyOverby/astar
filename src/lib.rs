@@ -1,123 +1,192 @@
-#![feature(if_let, tuple_indexing)]
-extern crate arena;
+#![feature(rustc_private, collections)]
+
 extern crate num;
+extern crate arena;
 
-use std::hash::Hash;
-use std::collections::RingBuf;
+use arena::TypedArena;
 use num::Zero;
+use std::hash::Hash;
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::cell::{Cell, RefCell};
+use std::mem;
 
-pub use reuse::{astar_r, ReusableSearchProblem};
-pub use two_dim::{astar_t, TwoDimSearchProblem};
+pub trait SearchProblem {
+    type Node: Hash + PartialEq + Eq;
+    type Cost: PartialOrd + Zero + Clone;
+    type Iter: Iterator<Item = (Self::Node, Self::Cost)>;
 
-#[cfg(test)]
-mod test;
-mod node;
-mod wrap;
-mod state;
-mod reuse;
-mod two_dim;
+    fn start(&self) -> Self::Node;
+    fn is_end(&self, &Self::Node) -> bool;
+    fn heuristic(&self, &Self::Node) -> Self::Cost;
+    fn neighbors(&mut self, &Self::Node) -> Self::Iter;
 
-
-/// A SearchProblem is a description of the problem that will be solved with A*.
-/// Implementing this trait will describe the problem well enough that it can
-/// be solved without any more information.
-/// N is the type of one of the search-states and
-/// C is the type of the cost to get from one state to another.
-pub trait SearchProblem<N, C, I: Iterator<(N, C)>> {
-    /// A state representing the start of the search.
-    #[inline(always)]
-    fn start(&self) -> N;
-    /// Check to see if a state is the goal state.
-    #[inline(always)]
-    fn is_end(&self, &N) -> bool;
-    /// A function that estimates the cost to get from
-    /// a node to the end.
-    /// heuristic(end_state) should always be 0.
-    #[inline(always)]
-    fn heuristic(&self, &N) -> C;
-    /// A function returning the neighbors of a search state along
-    /// with the cost to get to that state.
-    #[inline(always)]
-    fn neighbors(&self, at: &N) -> I;
-    /// This method is used if an estimated length of the path
-    /// is available.
-    #[inline(always)]
-    fn estimate_length(&self) -> Option<uint> { None }
+    fn estimate_length(&self) -> Option<u64> { None }
 }
 
-/// Perform an A* search on the provided search-problem.
-pub fn astar<N, C, I, S: SearchProblem<N, C, I>>(s: S) -> Option<RingBuf<N>>
-where N: Hash + PartialEq,
-      C: PartialOrd + Zero + Clone,
-      I: Iterator<(N, C)> {
-    // Start out with a search-state that contains the beginning
-    // node with cost zero.  Heuristic cost is also zero, but  this
-    // shouldn't matter as it will be removed from the priority queue instantly.
-    let state: state::AstarState<N, C> = state::AstarState::new();
-    let est_length = s.estimate_length().unwrap_or(16);
-    state.add(s.start(), Zero::zero(), Zero::zero());
-    let mut end;
+struct SearchNode<'a: 'b, 'b, S: 'a , C: Clone + 'a> {
+    pub state: &'a S,
+    pub parent: RefCell<Option<&'b SearchNode<'a, 'b, S, C>>>,
 
-    loop {
-        // Find the node with the smallest heuristic distance.
-        let current = match state.pop() {
-            // If we find the end node, start reconstructing the path.
-            Some(ref node) if s.is_end(node.state.borrow().as_ref().unwrap()) => {
-                end = Some(*node);
-                break;
-            }
-            Some(node) => node,
-            // If there are no more nodes in the queue, we have failed to
-            // find a path.
-            None => {
-                return None;
-            }
-        };
+    pub g: RefCell<C>,
+    pub f: RefCell<C>,
+    pub h: RefCell<C>,
 
-        // Go through each neighbor to the current node and
-        // either add it to the problem state, or update it if
-        // necessary.
-        for (neighbor_state, cost) in s.neighbors(
-        current.state.borrow().as_ref().unwrap()) {
-            if state.is_closed(&neighbor_state) {
-                continue;
-            }
+    pub opened: Cell<bool>,
+    pub closed: Cell<bool>,
+}
 
-            let tentative_g_score = *current.cost.borrow() + cost;
-
-            match state.find_open(&neighbor_state) {
-                Some(n) if *n.cost.borrow() > tentative_g_score.clone() => {
-                    *n.cost.borrow_mut() = tentative_g_score.clone();
-                    let heur = s.heuristic(&neighbor_state);
-                    *n.cost_with_heuristic.borrow_mut() = tentative_g_score + heur;
-                    *n.parent.borrow_mut() = Some(current);
-                }
-                Some(_) => {}
-                None => {
-                    let heur = s.heuristic(&neighbor_state);
-                    let n = state.add(neighbor_state,
-                                  tentative_g_score.clone(),
-                                  tentative_g_score + heur);
-                    *n.parent.borrow_mut() = Some(current);
-                }
-            };
+impl <'a, 'b, S, C: Zero + Clone> SearchNode<'a, 'b, S, C> {
+    fn new_initial(state: &'a S) -> SearchNode<S, C> {
+        SearchNode {
+            state: state,
+            parent: RefCell::new(None),
+            g: RefCell::new(Zero::zero()),
+            f: RefCell::new(Zero::zero()),
+            h: RefCell::new(Zero::zero()),
+            opened: Cell::new(true),
+            closed: Cell::new(false)
         }
     }
 
-    // If we've reached this point, then a valid path exists from the start
-    // to the end.  Construct this path by traversing backwards from the end
-    // back to the start via the parent property.
-    let mut cur = end;
-    let mut path = RingBuf::with_capacity(est_length);
-    loop {
-        match cur {
-            Some(n) => {
-                path.push_front(n.state.borrow_mut().take().unwrap());
-                cur = *n.parent.borrow();
-            }
-            None => {
-                return Some(path);
+    fn new(state: &'a S) -> SearchNode<S, C> {
+        SearchNode {
+            state: state,
+            parent: RefCell::new(None),
+            g: RefCell::new(Zero::zero()),
+            f: RefCell::new(Zero::zero()),
+            h: RefCell::new(Zero::zero()),
+            opened: Cell::new(false),
+            closed: Cell::new(false)
+        }
+    }
+
+    fn g(&self) -> C {
+        self.g.borrow().clone()
+    }
+
+    fn h(&self) -> C {
+        self.h.borrow().clone()
+    }
+
+    fn set_g(&self, g: C) {
+        *self.g.borrow_mut() = g;
+    }
+
+    fn set_f(&self, f: C) {
+        *self.f.borrow_mut() = f;
+    }
+
+    fn set_h(&self, h: C) {
+        *self.h.borrow_mut() = h;
+    }
+
+    fn set_parent(&self, p: &'b SearchNode<'a, 'b, S, C>) {
+        *self.parent.borrow_mut() = Some(p);
+    }
+}
+
+impl <'a, 'b, S: PartialEq, C: Clone> PartialEq for SearchNode<'a, 'b, S, C> {
+    fn eq(&self, other: &SearchNode<S, C>) -> bool {
+        self.state.eq(&other.state)
+    }
+}
+
+impl <'a, 'b, S: PartialEq, C: Clone> Eq for SearchNode<'a, 'b, S, C> {}
+
+impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> PartialOrd for SearchNode<'a, 'b, S, C> {
+    fn partial_cmp(&self, other: &SearchNode<S, C>) -> Option<Ordering> {
+        other.f.borrow().partial_cmp(&self.f.borrow())
+    }
+}
+
+impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, C> {
+    fn cmp(&self, other: &SearchNode<'a, 'b, S, C>) -> Ordering {
+        match self.partial_cmp(other) {
+            Some(x) => x,
+            None => Ordering::Equal
+        }
+    }
+}
+
+pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
+    let state_arena = TypedArena::new();
+    let node_arena = TypedArena::new();
+
+    let mut state_to_node = HashMap::new();
+    let mut closed = HashSet::new();
+
+    let mut heap = BinaryHeap::new();
+
+    let start_state:&_ = state_arena.alloc(s.start());
+
+    let start_node: SearchNode<S::Node, S::Cost> = SearchNode::new_initial(start_state);
+    let start_node:&_ = node_arena.alloc(start_node);
+    state_to_node.insert(start_state, start_node);
+
+    heap.push(start_node);
+
+    let mut found = None;
+
+    while let Some(node) = heap.pop() {
+        let node_state = node.state;
+        closed.insert(node_state);
+
+        node.closed.set(true);
+
+        if s.is_end(node_state) {
+            found = Some(node)
+        }
+
+        for (neighbor, cost) in s.neighbors(node_state) {
+            let neighbor_state:&_ = state_arena.alloc(neighbor);
+            let neighbor_node = state_to_node.get(neighbor_state).cloned()
+                                             .unwrap_or_else(|| {
+                node_arena.alloc(SearchNode::new(neighbor_state))
+            });
+
+            let ng = node.g() + cost;
+            if !neighbor_node.opened.get() || ng < neighbor_node.g() {
+
+                let h = if neighbor_node.h() == Zero::zero() {
+                    s.heuristic(neighbor_state)
+                } else { neighbor_node.h() };
+
+                neighbor_node.set_g(ng.clone());
+                neighbor_node.set_h(h.clone());
+                neighbor_node.set_f(ng + h);
+                // TODO: set parent
+                neighbor_node.set_parent(node);
+
+                if !neighbor_node.opened.get() {
+                    neighbor_node.opened.set(true);
+                    heap.push(neighbor_node);
+                } else {
+                    // We reset the value that did sorting.  This forces a
+                    // recalculation.
+                    heap = BinaryHeap::from_vec(heap.into_vec());
+                }
             }
         }
+    }
+
+    if found.is_some() {
+        let mut prev = found;
+        let mut deque = VecDeque::new();
+
+        while let Some(node) = prev {
+            unsafe {
+                deque.push_front(mem::replace(mem::transmute(node.state),
+                                              mem::uninitialized()));
+            }
+            prev = node.parent.borrow_mut().take();
+        }
+        Some(deque)
+
+    } else {
+        None
     }
 }
