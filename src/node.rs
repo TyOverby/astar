@@ -1,11 +1,10 @@
 use std::cell::RefCell;
-use std::hash::Hash;
-use std::hash::sip::SipState;
+use std::hash::{Hash, Hasher};
 
 /// DumbNode is used so that we can look up entire Node instances
 /// out of a hashmap even if we only have the state.  This feels
 /// like an awful hack, and it probably is.
-#[deriving(Hash)]
+#[derive(Hash)]
 pub struct DumbNode<'b, N: 'b>(pub &'b N);
 
 impl <'a, A> PartialEq for DumbNode<'a, A> where A: PartialEq {
@@ -39,7 +38,7 @@ pub struct Node<'a, N: 'a, C: 'a> {
 // Only hash the state.
 impl <'a, N, C> Hash for Node<'a, N, C>
 where N: Hash {
-    fn hash(&self, hash_state: &mut SipState) {
+    fn hash<H>(&self, hash_state: &mut H) where H: Hasher {
         self.state.borrow().as_ref().unwrap().hash(hash_state);
     }
 }

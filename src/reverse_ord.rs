@@ -1,6 +1,6 @@
 use std::cmp::{Less, Greater, Equal, Ordering};
 
-#[deriving(Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 pub struct ReverseOrd<E> {
     pub e: E
 }

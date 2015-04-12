@@ -1,4 +1,4 @@
-use std::cmp::{Ordering, Equal};
+use std::cmp::{Ordering};
 use super::node::Node;
 
 /// A wrapper around a reference to a node.
@@ -46,7 +46,7 @@ where C: PartialOrd {
         // Match backwards so that the priority queue
         // prioritizes minimal values.
         match (*that_cost).partial_cmp(&*this_cost) {
-            None => Equal,
+            None => Ordering::Equal,
             Some(x) => x
         }
     }

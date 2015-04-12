@@ -1,5 +1,5 @@
-use std::collections::RingBuf;
-use std::vec::MoveItems;
+use std::collections::VecDeque;
+use std::vec::IntoIter;
 
 use super::{SearchProblem, astar};
 
@@ -18,7 +18,7 @@ pub trait TwoDimSearchProblem {
     fn cut_corners(&self) -> bool { false }
 }
 
-impl <'a, Rsp: TwoDimSearchProblem> SearchProblem<(i32, i32), u32, MoveItems<((i32,i32), u32)>>
+impl <'a, Rsp: TwoDimSearchProblem> SearchProblem<(i32, i32), u32, IntoIter<((i32,i32), u32)>>
 for TwoDimSearchProblemWrapper<'a, Rsp> {
     fn start(&self) -> (i32, i32) {
         self.start
@@ -39,11 +39,11 @@ for TwoDimSearchProblemWrapper<'a, Rsp> {
         (max(abs(dx), abs(dy)) * 2) as u32
     }
 
-    fn estimate_length(&self) -> Option<uint> {
-        Some(self.heuristic(&self.start()) as uint)
+    fn estimate_length(&self) -> Option<usize> {
+        Some(self.heuristic(&self.start()) as usize)
     }
 
-    fn neighbors(&self, node: &(i32, i32)) -> MoveItems<((i32, i32), u32)> {
+    fn neighbors(&self, node: &(i32, i32)) -> IntoIter<((i32, i32), u32)> {
         let mut v = vec![];
         let (x, y) = *node;
         let ap = (x + 0, y + 1);
@@ -119,7 +119,7 @@ for TwoDimSearchProblemWrapper<'a, Rsp> {
 
 
 
-pub fn astar_t<S>(s: &S, start: (i32, i32), end: (i32, i32)) -> Option<RingBuf<(i32, i32)>> where
+pub fn astar_t<S>(s: &S, start: (i32, i32), end: (i32, i32)) -> Option<VecDeque<(i32, i32)>> where
 S: TwoDimSearchProblem
 {
     let rspw = TwoDimSearchProblemWrapper {
