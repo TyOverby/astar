@@ -1,9 +1,7 @@
-#![feature(rustc_private, collections)]
-
 extern crate num;
-extern crate arena;
+extern crate typed_arena;
 
-use arena::TypedArena;
+use typed_arena::Arena as TypedArena;
 use num::Zero;
 use std::hash::Hash;
 use std::collections::BinaryHeap;
@@ -113,18 +111,18 @@ impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, 
 }
 
 pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
-    let state_arena = TypedArena::new();
-    let node_arena = TypedArena::new();
+    let state_arena: TypedArena<S::Node>  = TypedArena::new();
+    let node_arena: TypedArena<SearchNode<S::Node, S::Cost>> = TypedArena::new();
 
-    let mut state_to_node = HashMap::new();
+    let mut state_to_node: HashMap<&S::Node, &SearchNode<S::Node, S::Cost>> = HashMap::new();
     let mut closed = HashSet::new();
 
-    let mut heap = BinaryHeap::new();
+    let mut heap: BinaryHeap<&SearchNode<S::Node, S::Cost>> = BinaryHeap::new();
 
-    let start_state:&_ = state_arena.alloc(s.start());
+    let start_state: &S::Node = state_arena.alloc(s.start());
 
     let start_node: SearchNode<S::Node, S::Cost> = SearchNode::new_initial(start_state);
-    let start_node:&_ = node_arena.alloc(start_node);
+    let start_node: &SearchNode<S::Node, S::Cost> = node_arena.alloc(start_node);
     state_to_node.insert(start_state, start_node);
 
     heap.push(start_node);
@@ -150,7 +148,6 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
 
             let ng = node.g() + cost;
             if !neighbor_node.opened.get() || ng < neighbor_node.g() {
-
                 let h = if neighbor_node.h() == Zero::zero() {
                     s.heuristic(neighbor_state)
                 } else { neighbor_node.h() };
@@ -167,7 +164,7 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
                 } else {
                     // We reset the value that did sorting.  This forces a
                     // recalculation.
-                    heap = BinaryHeap::from_vec(heap.into_vec());
+                    heap = heap_from_vec(vec_from_heap(heap)) // BinaryHeap::from_vec(heap.into_vec());
                 }
             }
         }
@@ -184,9 +181,19 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
             }
             prev = node.parent.borrow_mut().take();
         }
-        Some(deque)
 
+        Some(deque)
     } else {
         None
     }
+}
+
+fn heap_from_vec<T: Ord>(v: Vec<T>) -> BinaryHeap<T> {
+    let mut b_heap = BinaryHeap::with_capacity(v.len());
+    b_heap.extend(v.into_iter());
+    b_heap
+}
+
+fn vec_from_heap<T: Ord>(h: BinaryHeap<T>) -> Vec<T> {
+    h.into_iter().collect()
 }
