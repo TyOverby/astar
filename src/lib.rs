@@ -1,3 +1,5 @@
+#![allow(mutable_transmutes)]
+
 extern crate num;
 extern crate typed_arena;
 
@@ -12,17 +14,71 @@ use std::cmp::Ordering;
 use std::cell::{Cell, RefCell};
 use std::mem;
 
+#[cfg(test)]
+mod test;
+
 pub trait SearchProblem {
     type Node: Hash + PartialEq + Eq;
     type Cost: PartialOrd + Zero + Clone;
-    type Iter: Iterator<Item = (Self::Node, Self::Cost)>;
+    type Iter: Iterator<Item=(Self::Node, Self::Cost)>;
 
     fn start(&self) -> Self::Node;
     fn is_end(&self, &Self::Node) -> bool;
     fn heuristic(&self, &Self::Node) -> Self::Cost;
     fn neighbors(&mut self, &Self::Node) -> Self::Iter;
 
-    fn estimate_length(&self) -> Option<u64> { None }
+    fn estimate_length(&self) -> Option<u32> { None }
+}
+
+pub trait ReusableSearchProblem {
+    type Node: Hash + PartialEq + Eq + Clone;
+    type Cost: PartialOrd + Zero + Clone;
+    type Iter: Iterator<Item=(Self::Node, Self::Cost)>;
+
+    fn heuristic(&self, &Self::Node, &Self::Node) -> Self::Cost;
+    fn neighbors(&mut self, &Self::Node) -> Self::Iter;
+    fn estimate_length(&self, _a: &Self::Node, _b: &Self::Node) -> Option<u32> { None }
+
+    fn search(&mut self, start: Self::Node, end: Self::Node) -> ReuseSearchInstance<Self, Self::Node> {
+        let est = self.estimate_length(&start, &end);
+        ReuseSearchInstance {
+            rsp: self,
+            start: start,
+            end: end,
+            estimation: est
+        }
+    }
+}
+
+pub struct ReuseSearchInstance<'a, RSP: 'a + ?Sized, S> {
+    rsp: &'a mut RSP,
+    start: S,
+    end: S,
+    estimation: Option<u32>
+}
+
+impl <'a, RSP: ReusableSearchProblem> SearchProblem for ReuseSearchInstance<'a, RSP, RSP::Node> {
+    type Node = RSP::Node;
+    type Cost = RSP::Cost;
+    type Iter = RSP::Iter;
+
+    fn start(&self) -> Self::Node {
+         self.start.clone()
+    }
+
+    fn is_end(&self, other: &Self::Node) -> bool {
+        &self.end == other
+    }
+
+    fn heuristic(&self, a: &Self::Node) -> Self::Cost {
+        self.rsp.heuristic(a, &self.end)
+    }
+
+    fn neighbors(&mut self, node: &Self::Node) -> Self::Iter {
+        self.rsp.neighbors(node)
+    }
+
+    fn estimate_length(&self) -> Option<u32> { self.estimation }
 }
 
 struct SearchNode<'a: 'b, 'b, S: 'a , C: Clone + 'a> {
@@ -136,7 +192,8 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
         node.closed.set(true);
 
         if s.is_end(node_state) {
-            found = Some(node)
+            found = Some(node);
+            break;
         }
 
         for (neighbor, cost) in s.neighbors(node_state) {
