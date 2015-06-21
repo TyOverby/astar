@@ -72,6 +72,7 @@ impl <T: TwoDSearchProblem> ReusableSearchProblem for T {
         fn abs(x: i32) -> i32 {
             if x < 0 { -x  } else { x }
         }
+
         let &(bx, by) = a;
         let &(ex, ey) = b;
         let (dx, dy) = (ex - bx, ey - by);
