@@ -68,7 +68,6 @@ impl <T: TwoDSearchProblem> ReusableSearchProblem for T {
     type Iter = IntoIter<((i32, i32), u32)>;
 
     fn heuristic(&self, a: &Self::Node, b: &Self::Node) -> Self::Cost {
-        use std::cmp::max;
         fn abs(x: i32) -> i32 {
             if x < 0 { -x  } else { x }
         }
@@ -78,7 +77,9 @@ impl <T: TwoDSearchProblem> ReusableSearchProblem for T {
         let (dx, dy) = (ex - bx, ey - by);
 
         // Chebyshev Distance
-        (max(abs(dx), abs(dy)) * 2) as u32
+        // return (max(abs(dx), abs(dy)) * 2) as u32;
+        // Manhattan Distance
+        return ((abs(dx) + abs(dy)) as u32) * 2;
     }
 
     fn neighbors(&mut self, node: &Self::Node) -> Self::Iter {
@@ -289,6 +290,7 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::
         let node_state = node.state;
 
         node.closed.set(true);
+        node.opened.set(false);
 
         if s.is_end(node_state) {
             found = Some(node);
@@ -316,7 +318,6 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::
                 neighbor_node.set_g(ng.clone());
                 neighbor_node.set_h(h.clone());
                 neighbor_node.set_f(ng + h);
-                // TODO: set parent
                 neighbor_node.set_parent(node);
 
                 if !neighbor_node.opened.get() {
