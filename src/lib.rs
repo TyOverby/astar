@@ -4,6 +4,7 @@ extern crate num;
 extern crate typed_arena;
 
 use typed_arena::Arena as TypedArena;
+use std::vec::IntoIter;
 use num::Zero;
 use std::hash::Hash;
 use std::collections::BinaryHeap;
@@ -50,11 +51,111 @@ pub trait ReusableSearchProblem {
     }
 }
 
+pub trait TwoDSearchProblem {
+    fn get(&mut self, x: i32, y: i32) -> Option<u32>;
+    fn diag(&self) -> bool { false }
+    fn cut_corners(&self) ->  bool { false }
+}
+
 pub struct ReuseSearchInstance<'a, RSP: 'a + ?Sized, S> {
     rsp: &'a mut RSP,
     start: S,
     end: S,
     estimation: Option<u32>
+}
+
+impl <T: TwoDSearchProblem> ReusableSearchProblem for T {
+    type Node = (i32, i32);
+    type Cost = u32;
+    type Iter = IntoIter<((i32, i32), u32)>;
+
+    fn heuristic(&self, a: &Self::Node, b: &Self::Node) -> Self::Cost {
+        use std::cmp::max;
+        fn abs(x: i32) -> i32 {
+            if x < 0 { -x  } else { x }
+        }
+        let &(bx, by) = a;
+        let &(ex, ey) = b;
+        let (dx, dy) = (ex - bx, ey - by);
+
+        // Chebyshev Distance
+        (max(abs(dx), abs(dy)) * 2) as u32
+    }
+
+    fn neighbors(&mut self, node: &Self::Node) -> Self::Iter {
+                let mut v = vec![];
+        let (x, y) = *node;
+        let ap = (x + 0, y + 1);
+        let bp = (x - 1, y + 0);
+        let cp = (x + 1, y + 0);
+        let dp = (x + 0, y - 1);
+
+        let a = self.get(ap.0, ap.1);
+        let b = self.get(bp.0, bp.1);
+        let c = self.get(cp.0, cp.1);
+        let d = self.get(dp.0, dp.1);
+
+        if let Some(p) = a {
+            v.push((ap, p + 2));
+        }
+        if let Some(p) = b {
+            v.push((bp, p + 2));
+        }
+        if let Some(p) = c {
+            v.push((cp, p + 2));
+        }
+        if let Some(p) = d {
+            v.push((dp, p + 2));
+        }
+
+        if self.diag() {
+            let xp = (x - 1, y + 1);
+            let yp = (x + 1, y + 1);
+            let zp = (x - 1, y - 1);
+            let wp = (x + 1, y - 1);
+
+            if !self.cut_corners() {
+                if a.is_some() && b.is_some() {
+                    if let Some(p) = self.get(xp.0, xp.1) {
+                        v.push((xp, p + 3));
+                    }
+                }
+                if a.is_some() && c.is_some() {
+                    if let Some(p) = self.get(yp.0, yp.1) {
+                        v.push((yp, p + 3));
+                    }
+                }
+                if c.is_some() && d.is_some() {
+                    if let Some(p) = self.get(wp.0, wp.1) {
+                        v.push((wp, p + 3));
+                    }
+                }
+                if b.is_some() && d.is_some() {
+                    if let Some(p) = self.get(zp.0, zp.1) {
+                        v.push((zp, p + 3))
+                    }
+                }
+
+            } else {
+                if let Some(p) = self.get(xp.0, xp.1) {
+                    v.push((xp, p + 3));
+                }
+                if let Some(p) = self.get(yp.0, yp.1) {
+                    v.push((yp, p + 3));
+                }
+                if let Some(p) = self.get(wp.0, wp.1) {
+                    v.push((wp, p + 3));
+                }
+                if let Some(p) = self.get(zp.0, zp.1) {
+                    v.push((zp, p + 3))
+                }
+            }
+        }
+
+        v.into_iter()
+    }
+
+    fn estimate_length(&self, _a: &Self::Node, _b: &Self::Node) -> Option<u32> { None }
 }
 
 impl <'a, RSP: ReusableSearchProblem> SearchProblem for ReuseSearchInstance<'a, RSP, RSP::Node> {
@@ -81,6 +182,7 @@ impl <'a, RSP: ReusableSearchProblem> SearchProblem for ReuseSearchInstance<'a, 
     fn estimate_length(&self) -> Option<u32> { self.estimation }
 }
 
+#[derive(Debug)]
 struct SearchNode<'a: 'b, 'b, S: 'a , C: Clone + 'a> {
     pub state: &'a S,
     pub parent: RefCell<Option<&'b SearchNode<'a, 'b, S, C>>>,
@@ -166,13 +268,12 @@ impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, 
     }
 }
 
-pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
+// We aren't correctly closing items and they are getting popped multiple times.
+pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::Node: ::std::fmt::Debug, S::Cost: ::std::fmt::Debug {
     let state_arena: TypedArena<S::Node>  = TypedArena::new();
     let node_arena: TypedArena<SearchNode<S::Node, S::Cost>> = TypedArena::new();
 
     let mut state_to_node: HashMap<&S::Node, &SearchNode<S::Node, S::Cost>> = HashMap::new();
-    let mut closed = HashSet::new();
-
     let mut heap: BinaryHeap<&SearchNode<S::Node, S::Cost>> = BinaryHeap::new();
 
     let start_state: &S::Node = state_arena.alloc(s.start());
@@ -187,7 +288,6 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
 
     while let Some(node) = heap.pop() {
         let node_state = node.state;
-        closed.insert(node_state);
 
         node.closed.set(true);
 
@@ -198,16 +298,21 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> {
 
         for (neighbor, cost) in s.neighbors(node_state) {
             let neighbor_state:&_ = state_arena.alloc(neighbor);
-            let neighbor_node = state_to_node.get(neighbor_state).cloned()
-                                             .unwrap_or_else(|| {
-                node_arena.alloc(SearchNode::new(neighbor_state))
-            });
+            let neighbor_node =
+                state_to_node.entry(neighbor_state)
+                             .or_insert_with(|| node_arena.alloc(SearchNode::new(neighbor_state)));
+
+            if neighbor_node.closed.get() {
+                continue;
+            }
 
             let ng = node.g() + cost;
             if !neighbor_node.opened.get() || ng < neighbor_node.g() {
                 let h = if neighbor_node.h() == Zero::zero() {
                     s.heuristic(neighbor_state)
-                } else { neighbor_node.h() };
+                } else {
+                    neighbor_node.h()
+                };
 
                 neighbor_node.set_g(ng.clone());
                 neighbor_node.set_h(h.clone());
