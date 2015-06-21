@@ -11,3 +11,4 @@ description = "A generic implementation of the A* pathfinding algorithm."
 
 [dependencies]
 num = "*"
+typed-arena = "*"
