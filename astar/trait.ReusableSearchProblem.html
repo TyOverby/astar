@@ -26,7 +26,7 @@
 
     <section class="sidebar">
         
-        <p class='location'><a href='index.html'>astar</a></p><div class='block trait'><h2>Traits</h2><a class='trait current' href='trait.ReusableSearchProblem.html'>ReusableSearchProblem</a><a class='trait ' href='trait.SearchProblem.html'>SearchProblem</a></div><div class='block fn'><h2>Functions</h2><a class='fn ' href='fn.astar.html'>astar</a><a class='fn ' href='fn.astar_r.html'>astar_r</a></div>
+        <p class='location'><a href='index.html'>astar</a></p><script>window.sidebarCurrent = {name: 'ReusableSearchProblem', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
     </section>
 
     <nav class="sub">
@@ -42,34 +42,32 @@
 
     <section id='main' class="content trait">
 <h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>astar</a>::<wbr><a class='trait' href=''>ReusableSearchProblem</a><wbr></span><span class='out-of-band'><span id='render-detail'>
-            <a id="collapse-all" href="#">[-]
-            </a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-1008' href='../src/astar/home/ty/workspace/rust/astar_bump/src/lib.rs.html#251-262'>[src]</a></span></h1>
-<pre class='rust trait'>pub trait ReusableSearchProblem&lt;N, C, I: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(N, C)</a>&gt;&gt; {
-    fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;N) -&gt; C;
-    fn <a href='#tymethod.neighbors' class='fnname'>neighbors</a>(&amp;self, at: &amp;N) -&gt; I;
+            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-79' href='../src/astar/lib.rs.html#32-50'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait ReusableSearchProblem {
+    type Node: <a class='trait' href='http://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>;
+    type Cost: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html' title='core::cmp::PartialOrd'>PartialOrd</a> + <a class='trait' href='http://doc.rust-lang.org/num/num/traits/trait.Zero.html' title='num::traits::Zero'>Zero</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>;
+    type Iter: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;Item=<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Cost</a>)</a>&gt;;
 
-    fn <a href='#method.estimate_length' class='fnname'>estimate_length</a>(&amp;self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.uint.html'>uint</a>&gt; { ... }
-}</pre><div class='docblock'><p>ReusableSearchProblem is like a regular SearchProblem but without
-the <code>start()</code> and <code>is_end()</code> checks.  Instead, the start and end
-will be provided when <code>astar_r()</code> is called.</p>
-</div>
+    fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Cost</a>;
+    fn <a href='#tymethod.neighbors' class='fnname'>neighbors</a>(&amp;mut self, &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Iter</a>;
+
+    fn <a href='#method.estimate_length' class='fnname'>estimate_length</a>(&amp;self, _a: &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, _b: &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>&gt; { ... }
+    fn <a href='#method.search' class='fnname'>search</a>(&amp;mut self, start: Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, end: Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; <a class='struct' href='../astar/struct.ReuseSearchInstance.html' title='astar::ReuseSearchInstance'>ReuseSearchInstance</a>&lt;Self, Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>&gt; { ... }
+}</pre>
+            <h2 id='associated-types'>Associated Types</h2>
+            <div class='methods'>
+        <h3 id='associatedtype.Node' class='method'><a class='stability Unmarked' title='No stability level'></a><code>type Node: <a class='trait' href='http://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></code></h3><h3 id='associatedtype.Cost' class='method'><a class='stability Unmarked' title='No stability level'></a><code>type Cost: <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html' title='core::cmp::PartialOrd'>PartialOrd</a> + <a class='trait' href='http://doc.rust-lang.org/num/num/traits/trait.Zero.html' title='num::traits::Zero'>Zero</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></code></h3><h3 id='associatedtype.Iter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>type Iter: <a class='trait' href='http://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html' title='core::iter::Iterator'>Iterator</a>&lt;Item=<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Cost</a>)</a>&gt;</code></h3></div>
             <h2 id='required-methods'>Required Methods</h2>
             <div class='methods'>
-        <h3 id='tymethod.heuristic' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;N) -&gt; C</code></h3><div class='docblock'><p>A function that estimates the cost to get from
-a node to the end.
-heuristic(end_state) should always be 0.</p>
-</div><h3 id='tymethod.neighbors' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.neighbors' class='fnname'>neighbors</a>(&amp;self, at: &amp;N) -&gt; I</code></h3><div class='docblock'><p>A function returning the neighbors of a search state along
-with the cost to get to that state.</p>
-</div></div>
+        <h3 id='tymethod.heuristic' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.heuristic' class='fnname'>heuristic</a>(&amp;self, &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Cost</a></code></h3><h3 id='tymethod.neighbors' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#tymethod.neighbors' class='fnname'>neighbors</a>(&amp;mut self, &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Iter</a></code></h3></div>
             <h2 id='provided-methods'>Provided Methods</h2>
             <div class='methods'>
-        <h3 id='method.estimate_length' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.estimate_length' class='fnname'>estimate_length</a>(&amp;self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.uint.html'>uint</a>&gt;</code></h3><div class='docblock'><p>This method is used if an estimated length of the path
-is available.</p>
-</div></div>
+        <h3 id='method.estimate_length' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.estimate_length' class='fnname'>estimate_length</a>(&amp;self, _a: &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, _b: &amp;Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>&gt;</code></h3><h3 id='method.search' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.search' class='fnname'>search</a>(&amp;mut self, start: Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>, end: Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>) -&gt; <a class='struct' href='../astar/struct.ReuseSearchInstance.html' title='astar::ReuseSearchInstance'>ReuseSearchInstance</a>&lt;Self, Self::<a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>Node</a>&gt;</code></h3></div>
         <h2 id='implementors'>Implementors</h2>
         <ul class='item-list' id='implementors-list'>
-    </ul><script type="text/javascript" async
+    <li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;T: <a class='trait' href='../astar/trait.TwoDSearchProblem.html' title='astar::TwoDSearchProblem'>TwoDSearchProblem</a>&gt; <a class='trait' href='../astar/trait.ReusableSearchProblem.html' title='astar::ReusableSearchProblem'>ReusableSearchProblem</a> for T</code></li>
+</ul><script type="text/javascript" async
                               src="../implementors/astar/trait.ReusableSearchProblem.js">
                       </script></section>
     <section id='search' class="content hidden"></section>

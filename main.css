@@ -64,11 +64,14 @@
 
 body {
     color: #333;
-    min-width: 500px;
-    font: 16px/1.4 "Source Serif Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font: 16px/1.4 "Source Serif Pro", Georgia, Times, "Times New Roman", serif;
     margin: 0;
     position: relative;
     padding: 10px 15px 20px 15px;
+
+    -webkit-font-feature-settings: "kern", "liga";
+    -moz-font-feature-settings: "kern", "liga";
+    font-feature-settings: "kern", "liga";
 }
 
 h1 {
@@ -80,7 +83,7 @@ h2 {
 h3 {
     font-size: 1.3em;
 }
-h1, h2, h3:not(.impl):not(.method), h4:not(.method) {
+h1, h2, h3:not(.impl):not(.method):not(.type):not(.tymethod), h4:not(.method):not(.type):not(.tymethod) {
     color: black;
     font-weight: 500;
     margin: 20px 0 15px 0;
@@ -90,18 +93,18 @@ h1.fqn {
     border-bottom: 1px dashed #D5D5D5;
     margin-top: 0;
 }
-h2, h3:not(.impl):not(.method), h4:not(.method) {
+h2, h3:not(.impl):not(.method):not(.type):not(.tymethod), h4:not(.method):not(.type):not(.tymethod) {
     border-bottom: 1px solid #DDDDDD;
 }
-h3.impl, h3.method, h4.method {
+h3.impl, h3.method, h4.method, h3.type, h4.type {
     font-weight: 600;
     margin-top: 10px;
     margin-bottom: 10px;
 }
-h3.impl, h3.method {
+h3.impl, h3.method, h3.type {
     margin-top: 15px;
 }
-h1, h2, h3, h4, section.sidebar, a.source, .search-input, .content table a, .collapse-toggle {
+h1, h2, h3, h4, section.sidebar, a.source, .search-input, .content table :not(code)>a, .collapse-toggle {
     font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -177,7 +180,7 @@ nav.sub {
     color: #333;
 }
 
-.location a:first-child { font-weight: bold; }
+.location a:first-child { font-weight: 500; }
 
 .block {
     padding: 0 10px;
@@ -213,10 +216,19 @@ nav.sub {
     overflow: auto;
     padding-left: 0;
 }
-.content pre.line-numbers { float: left; border: none; }
-.line-numbers span { color: #c67e2d; }
+.content pre.line-numbers {
+    float: left;
+    border: none;
+    position: relative;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+.line-numbers span { color: #c67e2d; cursor: pointer; }
 .line-numbers .line-highlighted {
-    background-color: #f6fdb0;
+    background-color: #f6fdb0 !important;
 }
 
 .content .highlighted {
@@ -230,7 +242,8 @@ nav.sub {
 .content .highlighted.struct { background-color: #e7b1a0; }
 .content .highlighted.fn { background-color: #c6afb3; }
 .content .highlighted.method { background-color: #c6afb3; }
-.content .highlighted.ffi { background-color: #c6afb3; }
+.content .highlighted.tymethod { background-color: #c6afb3; }
+.content .highlighted.type { background-color: #c6afb3; }
 
 .docblock.short.nowrap {
     display: block;
@@ -279,6 +292,27 @@ nav.sub {
 .content td p:first-child { margin-top: 0; }
 .content td h1, .content td h2 { margin-left: 0; font-size: 1.1em; }
 
+.docblock table {
+    border: 1px solid #ddd;
+    margin: .5em 0;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.docblock table td {
+    padding: .5em;
+    border-top: 1px dashed #ddd;
+    border-bottom: 1px dashed #ddd;
+
+}
+
+.docblock table th {
+    padding: .5em;
+    text-align: left;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
 .content .item-list {
     list-style-type: none;
     padding: 0;
@@ -300,9 +334,14 @@ nav.sub {
     font-size: 1em;
     position: relative;
 }
+/* Shift "where ..." part of method definition down a line */
+.content .method .where { display: block; }
+/* Bit of whitespace to indent it */
+.content .method .where::before { content: '      '; }
+
 .content .methods .docblock { margin-left: 40px; }
 
-.content .impl-methods .docblock { margin-left: 40px; }
+.content .impl-items .docblock { margin-left: 40px; }
 
 nav {
     border-bottom: 1px solid #e0e0e0;
@@ -335,8 +374,14 @@ a {
     color: #000;
     background: transparent;
 }
-p a { color: #4e8bca; }
-p a:hover { text-decoration: underline; }
+
+.docblock a {
+    color: #4e8bca;
+}
+
+.docblock a:hover {
+    text-decoration: underline;
+}
 
 .content span.trait, .content a.trait, .block a.current.trait { color: #ed9603; }
 .content span.mod, .content a.mod, block a.current.mod { color: #4d76ae; }
@@ -344,7 +389,7 @@ p a:hover { text-decoration: underline; }
 .content span.struct, .content a.struct, .block a.current.struct { color: #e53700; }
 .content span.fn, .content a.fn, .block a.current.fn { color: #8c6067; }
 .content span.method, .content a.method, .block a.current.method { color: #8c6067; }
-.content span.ffi, .content a.ffi, .block a.current.ffi { color: #8c6067; }
+.content span.tymethod, .content a.tymethod, .block a.current.tymethod { color: #8c6067; }
 .content .fnname { color: #8c6067; }
 
 .search-input {
@@ -436,7 +481,7 @@ h1 .stability {
     padding: 4px 10px;
 }
 
-.impl-methods .stability, .methods .stability {
+.impl-items .stability, .methods .stability {
     margin-right: 20px;
 }
 
@@ -448,6 +493,10 @@ h1 .stability {
 .stability.Locked { border-color: #0084B6; color: #00668c; }
 .stability.Unmarked { border-color: #BBBBBB; }
 
+td.summary-column {
+    width: 100%;
+}
+
 .summary {
     padding-right: 0px;
 }
@@ -458,6 +507,7 @@ h1 .stability {
 .summary.Unmarked { background-color: #BBBBBB; }
 
 :target { background: #FDFFD3; }
+.line-numbers :target { background-color: transparent; }
 
 /* Code highlighting */
 pre.rust .kw { color: #8959A8; }
@@ -489,12 +539,21 @@ pre.rust { position: relative; }
     margin: 0 0 -5px;
     padding: 0;
 }
+
 .section-header:hover a:after {
     content: '\2002\00a7\2002';
 }
 
+.section-header:hover a {
+    text-decoration: none;
+}
+
+.section-header a {
+    color: inherit;
+}
+
 .collapse-toggle {
-    font-weight: 100;
+    font-weight: 300;
     position: absolute;
     left: 13px;
     color: #999;
@@ -523,7 +582,6 @@ pre.rust { position: relative; }
 
 .toggle-label {
     color: #999;
-    font-style: italic;
 }
 
 
@@ -573,11 +631,25 @@ pre.rust { position: relative; }
         margin-left: 0px;
     }
 
+    .content .in-band {
+        width: 100%;
+    }
+
+    .content .out-of-band {
+        display: none;
+    }
+
     .toggle-wrapper > .collapse-toggle {
         left: 0px;
     }
 
     .toggle-wrapper {
         height: 1.5em;
+    }
+}
+
+@media print {
+    nav.sub, .content .out-of-band, .collapse-toggle {
+        display: none;
     }
 }
