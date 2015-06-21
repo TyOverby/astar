@@ -1,5 +1,4 @@
 #![allow(mutable_transmutes)]
-
 extern crate num;
 extern crate typed_arena;
 
@@ -8,7 +7,6 @@ use std::vec::IntoIter;
 use num::Zero;
 use std::hash::Hash;
 use std::collections::BinaryHeap;
-use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::collections::HashMap;
 use std::cmp::Ordering;
