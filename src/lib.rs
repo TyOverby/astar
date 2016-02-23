@@ -269,7 +269,7 @@ impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, 
 }
 
 // We aren't correctly closing items and they are getting popped multiple times.
-pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::Node: ::std::fmt::Debug, S::Cost: ::std::fmt::Debug {
+pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::Node: ::std::clone::Clone + ::std::fmt::Debug, S::Cost: ::std::fmt::Debug {
     let state_arena: TypedArena<S::Node>  = TypedArena::new();
     let node_arena: TypedArena<SearchNode<S::Node, S::Cost>> = TypedArena::new();
 
@@ -337,10 +337,7 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::
         let mut deque = VecDeque::new();
 
         while let Some(node) = prev {
-            unsafe {
-                deque.push_front(mem::replace(mem::transmute(node.state),
-                                              mem::uninitialized()));
-            }
+            deque.push_front((*node.state).clone());
             prev = node.parent.borrow_mut().take();
         }
 
