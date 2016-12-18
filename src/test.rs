@@ -28,8 +28,8 @@ impl SearchProblem for GridState {
     }
     fn neighbors(&mut self, &(x, y): &(i32, i32)) -> IntoIter<((i32, i32), i32)> {
         let mut vec = vec![];
-        for i in (-1 .. 1 + 1) {
-            for k in (-1 .. 1 + 1) {
+        for i in -1 .. 1 + 1 {
+            for k in -1 .. 1 + 1 {
                 if !(i == 0 && k == 0) {
                     vec.push(((x + i, y + k), 1));
                 }
@@ -64,19 +64,19 @@ fn test_iter() {
 #[test]
 fn test_start_end() {
     let p = path((0,0), (0,0)).unwrap();
-    assert!(p == vec![(0, 0)].into_iter().collect());
+    assert_eq!(p, vec![(0, 0)].into_iter().collect());
 }
 
 #[test]
 fn test_next() {
     let p = path((0,0), (0,1)).unwrap();
-    assert!(p == vec![(0,0), (0,1)].into_iter().collect());
+    assert_eq!(p, vec![(0,0), (0,1)].into_iter().collect());
 }
 
 #[test]
 fn test_few() {
     let p = path((0,0), (0,4)).unwrap();
-    assert!(p == vec![(0,0), (0,1) ,(0,2), (0,3), (0,4)].into_iter().collect());
+    assert_eq!(p, vec![(0,0), (0,1) ,(0,2), (0,3), (0,4)].into_iter().collect());
 }
 
 struct Maze {
