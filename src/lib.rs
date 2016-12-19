@@ -276,11 +276,9 @@ pub fn astar<S: SearchProblem>(s: &mut S) -> Option<VecDeque<S::Node>> where S::
     let mut heap: BinaryHeap<&SearchNode<S::Node, S::Cost>> = BinaryHeap::new();
 
     let start_state: &S::Node = state_arena.alloc(s.start());
+    let start_node: &SearchNode<S::Node, S::Cost> = node_arena.alloc(SearchNode::new_initial(start_state));
 
-    let start_node: SearchNode<S::Node, S::Cost> = SearchNode::new_initial(start_state);
-    let start_node: &SearchNode<S::Node, S::Cost> = node_arena.alloc(start_node);
     state_to_node.insert(start_state, start_node);
-
     heap.push(start_node);
 
     let mut found = None;
