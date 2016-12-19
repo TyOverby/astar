@@ -11,7 +11,6 @@ use std::collections::VecDeque;
 use std::collections::HashMap;
 use std::cmp::Ordering;
 use std::cell::{Cell, RefCell};
-use std::mem;
 
 #[cfg(test)]
 mod test;
