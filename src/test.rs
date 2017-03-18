@@ -128,7 +128,7 @@ fn test_maze() {
         (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1),
         (7, 2),
         (7, 3), (6, 3), (5, 3), (4, 3), (3, 3), (2, 3), (1, 3), (0, 3),
-        (0, 4)].into_iter().collect());
+        (0, 4)].into_iter().collect::<VecDeque<_>>());
 }
 
 #[test]
@@ -144,5 +144,5 @@ fn test_maze_reverse() {
     let mut maze = Maze{ xmax: 7, ymax: 5 };
     let p = astar(&mut maze.search((0,0), (0,4))).unwrap();
     let p2 = astar(&mut maze.search((0,4), (0,0))).unwrap();
-    assert_eq!(p, p2.into_iter().rev().collect());
+    assert_eq!(p, p2.into_iter().rev().collect::<VecDeque<_>>());
 }
