@@ -64,19 +64,19 @@ fn test_iter() {
 #[test]
 fn test_start_end() {
     let p = path((0,0), (0,0)).unwrap();
-    assert_eq!(p, vec![(0, 0)].into_iter().collect());
+    assert_eq!(p, vec![(0, 0)].into_iter().collect::<VecDeque<_>>());
 }
 
 #[test]
 fn test_next() {
     let p = path((0,0), (0,1)).unwrap();
-    assert_eq!(p, vec![(0,0), (0,1)].into_iter().collect());
+    assert_eq!(p, vec![(0,0), (0,1)].into_iter().collect::<VecDeque<_>>());
 }
 
 #[test]
 fn test_few() {
     let p = path((0,0), (0,4)).unwrap();
-    assert_eq!(p, vec![(0,0), (0,1) ,(0,2), (0,3), (0,4)].into_iter().collect());
+    assert_eq!(p, vec![(0,0), (0,1) ,(0,2), (0,3), (0,4)].into_iter().collect::<VecDeque<_>>());
 }
 
 struct Maze {
