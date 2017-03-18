@@ -1,10 +1,10 @@
 #![allow(mutable_transmutes)]
-extern crate num;
+extern crate num_traits;
 extern crate typed_arena;
 
 use typed_arena::Arena as TypedArena;
 use std::vec::IntoIter;
-use num::Zero;
+use num_traits::Zero;
 use std::hash::Hash;
 use std::collections::BinaryHeap;
 use std::collections::VecDeque;
