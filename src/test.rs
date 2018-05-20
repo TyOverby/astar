@@ -219,7 +219,11 @@ fn path(start: (i32, i32), end: (i32, i32)) -> Option<(VecDeque<(i32, i32)>, i32
         start: start,
         end: end,
     };
-    astar(&gs)
+    if let Some((p, c)) = astar(&gs) {
+        Some((p.into_iter().map(|(a, _)| a).collect(), c))
+    } else {
+        None
+    }
 }
 
 #[test]
@@ -314,7 +318,7 @@ fn test_maze() {
     */
     let p = astar(&mut maze.search((0, 0), (0, 4))).unwrap();
     assert_eq!(
-        p.0,
+        p.0.into_iter().map(|(a, _)| a).collect::<VecDeque<_>>(),
         vec![
             (0, 0),
             (0, 1),
@@ -353,5 +357,8 @@ fn test_maze_reverse() {
     let mut maze = Maze { xmax: 7, ymax: 5 };
     let p = astar(&mut maze.search((0, 0), (0, 4))).unwrap();
     let p2 = astar(&mut maze.search((0, 4), (0, 0))).unwrap();
-    assert_eq!(p.0, p2.0.into_iter().rev().collect::<VecDeque<_>>());
+    assert_eq!(
+        p.0.into_iter().map(|(a, _)| a).collect::<Vec<_>>(),
+        p2.0.into_iter().rev().map(|(a, _)| a).collect::<Vec<_>>()
+    );
 }

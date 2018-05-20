@@ -116,7 +116,7 @@ impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, 
     }
 }
 
-pub fn astar<S: SearchProblem>(s: &S) -> Option<(VecDeque<S::Node>, S::Cost)>
+pub fn astar<S: SearchProblem>(s: &S) -> Option<(VecDeque<(S::Node, S::Cost)>, S::Cost)>
 where
     S::Node: ::std::clone::Clone + ::std::fmt::Debug,
     S::Cost: ::std::fmt::Debug,
@@ -188,7 +188,7 @@ where
         let mut deque = VecDeque::new();
 
         while let Some(node) = prev {
-            deque.push_front((*node.state).clone());
+            deque.push_front(((*node.state).clone(), node.g()));
             prev = node.parent.borrow_mut().take();
         }
 
