@@ -154,7 +154,7 @@ impl<'a, RSP: ReusableSearchProblem> SearchProblem for ReuseSearchInstance<'a, R
         self.rsp.heuristic(a, &self.end)
     }
 
-    fn neighbors(&self, node: &Self::Node) -> Self::Iter {
+    fn neighbors(&self, node: &Self::Node, _: &Self::Cost) -> Self::Iter {
         self.rsp.neighbors(node)
     }
 
@@ -187,7 +187,7 @@ impl SearchProblem for GridState {
         let (s_x, s_y) = self.end;
         abs(s_x - p_x) + abs(s_y - p_y)
     }
-    fn neighbors(&self, &(x, y): &(i32, i32)) -> IntoIter<((i32, i32), i32)> {
+    fn neighbors(&self, &(x, y): &(i32, i32), _: &i32) -> IntoIter<((i32, i32), i32)> {
         let mut vec = vec![];
         for i in -1..1 + 1 {
             for k in -1..1 + 1 {
@@ -219,7 +219,7 @@ fn test_iter() {
         end: (0, 0),
     };
     assert!(
-        gs.neighbors(&(0, 0)).collect::<Vec<_>>()
+        gs.neighbors(&(0, 0), &0).collect::<Vec<_>>()
             == vec![
                 ((-1, -1), 1),
                 ((-1, 0), 1),

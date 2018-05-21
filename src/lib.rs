@@ -22,7 +22,7 @@ pub trait SearchProblem {
 
     fn is_end(&self, &Self::Node) -> bool;
     fn heuristic(&self, &Self::Node) -> Self::Cost;
-    fn neighbors(&self, &Self::Node) -> Self::Iter;
+    fn neighbors(&self, &Self::Node, &Self::Cost) -> Self::Iter;
 
     fn estimate_length(&self) -> Option<u32> {
         None
@@ -115,7 +115,10 @@ impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, 
     }
 }
 
-pub fn astar<S: SearchProblem>(s: &S, start: S::Node) -> Option<(VecDeque<(S::Node, S::Cost)>, S::Cost)>
+pub fn astar<S: SearchProblem>(
+    s: &S,
+    start: S::Node,
+) -> Option<(VecDeque<(S::Node, S::Cost)>, S::Cost)>
 where
     S::Node: ::std::clone::Clone,
 {
@@ -145,7 +148,7 @@ where
             break;
         }
 
-        for (neighbor, cost) in s.neighbors(node_state) {
+        for (neighbor, cost) in s.neighbors(node_state, &node.g()) {
             let neighbor_state: &_ = state_arena.alloc(neighbor);
             let neighbor_node = state_to_node
                 .entry(neighbor_state)
