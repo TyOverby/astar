@@ -15,17 +15,11 @@ pub trait ReusableSearchProblem {
         None
     }
 
-    fn search(
-        &mut self,
-        start: Self::Node,
-        end: Self::Node,
-    ) -> ReuseSearchInstance<Self, Self::Node> {
-        let est = self.estimate_length(&start, &end);
+    fn search(&mut self, end: Self::Node) -> ReuseSearchInstance<Self, Self::Node> {
         ReuseSearchInstance {
             rsp: self,
-            start: start,
             end: end,
-            estimation: est,
+            estimation: None,
         }
     }
 }
@@ -42,7 +36,6 @@ pub trait TwoDSearchProblem {
 
 pub struct ReuseSearchInstance<'a, RSP: 'a + ?Sized, S> {
     rsp: &'a RSP,
-    start: S,
     end: S,
     estimation: Option<u32>,
 }
@@ -153,10 +146,6 @@ impl<'a, RSP: ReusableSearchProblem> SearchProblem for ReuseSearchInstance<'a, R
     type Cost = RSP::Cost;
     type Iter = RSP::Iter;
 
-    fn start(&self) -> Self::Node {
-        self.start.clone()
-    }
-
     fn is_end(&self, other: &Self::Node) -> bool {
         &self.end == other
     }
@@ -191,9 +180,6 @@ impl SearchProblem for GridState {
     type Cost = i32;
     type Iter = IntoIter<((i32, i32), i32)>;
 
-    fn start(&self) -> (i32, i32) {
-        self.start
-    }
     fn is_end(&self, other: &(i32, i32)) -> bool {
         other == &self.end
     }
@@ -219,7 +205,7 @@ fn path(start: (i32, i32), end: (i32, i32)) -> Option<(VecDeque<(i32, i32)>, i32
         start: start,
         end: end,
     };
-    if let Some((p, c)) = astar(&gs) {
+    if let Some((p, c)) = astar(&gs, gs.start) {
         Some((p.into_iter().map(|(a, _)| a).collect(), c))
     } else {
         None
@@ -316,7 +302,7 @@ fn test_maze() {
         println!("");
     }
     */
-    let p = astar(&mut maze.search((0, 0), (0, 4))).unwrap();
+    let p = astar(&mut maze.search((0, 4)), (0, 0)).unwrap();
     assert_eq!(
         p.0.into_iter().map(|(a, _)| a).collect::<VecDeque<_>>(),
         vec![
@@ -347,16 +333,16 @@ fn test_maze() {
 #[test]
 fn test_maze_reusable() {
     let mut maze = Maze { xmax: 7, ymax: 5 };
-    let p = astar(&mut maze.search((0, 0), (0, 4))).unwrap();
-    let p2 = astar(&mut maze.search((0, 0), (0, 4))).unwrap();
+    let p = astar(&mut maze.search((0, 4)), (0, 0)).unwrap();
+    let p2 = astar(&mut maze.search((0, 4)), (0, 0)).unwrap();
     assert_eq!(p, p2);
 }
 
 #[test]
 fn test_maze_reverse() {
     let mut maze = Maze { xmax: 7, ymax: 5 };
-    let p = astar(&mut maze.search((0, 0), (0, 4))).unwrap();
-    let p2 = astar(&mut maze.search((0, 4), (0, 0))).unwrap();
+    let p = astar(&mut maze.search((0, 4)), (0, 0)).unwrap();
+    let p2 = astar(&mut maze.search((0, 0)), (0, 4)).unwrap();
     assert_eq!(
         p.0.into_iter().map(|(a, _)| a).collect::<Vec<_>>(),
         p2.0.into_iter().rev().map(|(a, _)| a).collect::<Vec<_>>()

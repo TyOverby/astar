@@ -20,7 +20,6 @@ pub trait SearchProblem {
     type Cost: PartialOrd + Zero + Clone;
     type Iter: Iterator<Item = (Self::Node, Self::Cost)>;
 
-    fn start(&self) -> Self::Node;
     fn is_end(&self, &Self::Node) -> bool;
     fn heuristic(&self, &Self::Node) -> Self::Cost;
     fn neighbors(&self, &Self::Node) -> Self::Iter;
@@ -116,10 +115,9 @@ impl<'a, 'b, S: PartialEq, C: PartialOrd + Clone> Ord for SearchNode<'a, 'b, S, 
     }
 }
 
-pub fn astar<S: SearchProblem>(s: &S) -> Option<(VecDeque<(S::Node, S::Cost)>, S::Cost)>
+pub fn astar<S: SearchProblem>(s: &S, start: S::Node) -> Option<(VecDeque<(S::Node, S::Cost)>, S::Cost)>
 where
-    S::Node: ::std::clone::Clone + ::std::fmt::Debug,
-    S::Cost: ::std::fmt::Debug,
+    S::Node: ::std::clone::Clone,
 {
     let state_arena: TypedArena<S::Node> = TypedArena::new();
     let node_arena: TypedArena<SearchNode<S::Node, S::Cost>> = TypedArena::new();
@@ -127,7 +125,7 @@ where
     let mut state_to_node: HashMap<&S::Node, &SearchNode<S::Node, S::Cost>> = HashMap::default();
     let mut heap: BinaryHeap<&SearchNode<S::Node, S::Cost>> = BinaryHeap::new();
 
-    let start_state: &S::Node = state_arena.alloc(s.start());
+    let start_state: &S::Node = state_arena.alloc(start);
     let start_node: &SearchNode<S::Node, S::Cost> =
         node_arena.alloc(SearchNode::new_initial(start_state));
 
@@ -202,6 +200,6 @@ fn resort_heap<T: Ord>(b: &mut BinaryHeap<T>) {
     use std::mem::swap;
     let mut temp = BinaryHeap::new();
     swap(b, &mut temp);
-    temp = BinaryHeap::from(temp.into_sorted_vec());
+    temp = BinaryHeap::from(temp);
     swap(b, &mut temp);
 }
